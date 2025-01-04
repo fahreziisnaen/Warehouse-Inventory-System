@@ -16,7 +16,7 @@ class OutboundRecord extends Model
         'lkb_number',
         'delivery_note_number',
         'outbound_date',
-        'customer_id',
+        'vendor_id',
         'project_id',
         'purpose'
     ];
@@ -25,9 +25,9 @@ class OutboundRecord extends Model
         'outbound_date' => 'date'
     ];
 
-    public function customer(): BelongsTo
+    public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'customer_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
     public function project(): BelongsTo

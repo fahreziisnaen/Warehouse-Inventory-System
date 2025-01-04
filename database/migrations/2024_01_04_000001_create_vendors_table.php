@@ -8,17 +8,17 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('suppliers', function (Blueprint $table) {
-            $table->id('supplier_id');
-            $table->string('supplier_name');
+        Schema::create('vendors', function (Blueprint $table) {
+            $table->id('vendor_id');
+            $table->foreignId('vendor_type_id')->constrained('vendor_types', 'vendor_type_id');
+            $table->string('vendor_name');
             $table->text('address');
-            $table->string('contact_info');
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('suppliers');
+        Schema::dropIfExists('vendors');
     }
 }; 

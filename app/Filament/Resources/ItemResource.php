@@ -31,20 +31,34 @@ class ItemResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('part_number_id')
                             ->relationship('partNumber', 'part_number')
+                            ->label('Part Number')
                             ->required()
-                            ->searchable(),
+                            ->preload()
+                            ->searchable()
+                            ->optionsLimit(15)
+                            ->createOptionForm([
+                                Forms\Components\Select::make('brand_id')
+                                    ->relationship('brand', 'brand_name')
+                                    ->required()
+                                    ->preload(),
+                                Forms\Components\TextInput::make('part_number')
+                                    ->required()
+                                    ->unique(),
+                                Forms\Components\Textarea::make('description')
+                                    ->columnSpanFull(),
+                            ]),
                         Forms\Components\TextInput::make('serial_number')
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true),
+                            ->unique(),
                         Forms\Components\Select::make('status')
-                            ->required()
                             ->options([
                                 'available' => 'Available',
                                 'in_use' => 'In Use',
                                 'maintenance' => 'Maintenance',
-                                'disposed' => 'Disposed',
-                            ]),
+                                'broken' => 'Broken',
+                            ])
+                            ->required(),
                         Forms\Components\DatePicker::make('manufacture_date')
                             ->required(),
                     ])

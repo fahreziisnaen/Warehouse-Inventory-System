@@ -32,7 +32,9 @@ class PartNumberResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('brand_id')
                             ->relationship('brand', 'brand_name')
+                            ->label('Brand')
                             ->required()
+                            ->preload()
                             ->searchable(),
                         Forms\Components\TextInput::make('part_number')
                             ->required()

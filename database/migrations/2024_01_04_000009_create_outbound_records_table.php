@@ -13,8 +13,9 @@ return new class extends Migration
             $table->string('lkb_number')->unique();
             $table->string('delivery_note_number')->unique();
             $table->date('outbound_date');
-            $table->foreignId('customer_id')->constrained('customers', 'customer_id');
-            $table->foreignId('project_id')->constrained('projects', 'project_id');
+            $table->foreignId('vendor_id')->constrained('vendors', 'vendor_id');
+            $table->string('project_id');
+            $table->foreign('project_id')->references('project_id')->on('projects');
             $table->string('purpose');
             $table->timestamps();
         });

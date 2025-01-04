@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Brand;
+use Illuminate\Database\Seeder;
 
 class BrandSeeder extends Seeder
 {
@@ -11,12 +11,20 @@ class BrandSeeder extends Seeder
     {
         $brands = [
             [
-                'brand_name' => 'Brand A',
-                'description' => 'Description for Brand A',
+                'brand_name' => 'Schneider Electric',
+                'description' => 'Peralatan listrik dan otomasi industri',
             ],
             [
-                'brand_name' => 'Brand B',
-                'description' => 'Description for Brand B',
+                'brand_name' => 'Siemens',
+                'description' => 'Solusi otomasi dan kontrol industri',
+            ],
+            [
+                'brand_name' => 'ABB',
+                'description' => 'Teknologi elektrifitasi dan otomasi',
+            ],
+            [
+                'brand_name' => 'Rockwell Automation',
+                'description' => 'Solusi otomasi industri dan informasi',
             ],
         ];
 

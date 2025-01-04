@@ -13,7 +13,7 @@ class PurchaseOrder extends Model
     protected $fillable = [
         'po_number',
         'po_date',
-        'supplier_id',
+        'vendor_id',
         'project_id',
         'total_amount'
     ];
@@ -23,9 +23,9 @@ class PurchaseOrder extends Model
         'total_amount' => 'decimal:2'
     ];
 
-    public function supplier(): BelongsTo
+    public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Supplier::class, 'supplier_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
     public function project(): BelongsTo

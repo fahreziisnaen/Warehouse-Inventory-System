@@ -15,7 +15,7 @@ class Project extends Model
     protected $fillable = [
         'project_id',
         'project_name',
-        'customer_id',
+        'vendor_id',
         'start_date',
         'end_date',
         'status',
@@ -27,9 +27,9 @@ class Project extends Model
         'end_date' => 'date'
     ];
 
-    public function customer(): BelongsTo
+    public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'customer_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id');
     }
 
     public function purchaseOrders(): HasMany
