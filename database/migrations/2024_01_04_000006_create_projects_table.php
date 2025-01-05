@@ -12,9 +12,6 @@ return new class extends Migration
             $table->string('project_id')->primary();
             $table->string('project_name');
             $table->foreignId('vendor_id')->constrained('vendors', 'vendor_id');
-            $table->date('start_date');
-            $table->date('end_date');
-            $table->string('status');
             $table->text('description')->nullable();
             $table->timestamps();
         });

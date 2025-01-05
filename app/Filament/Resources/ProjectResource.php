@@ -42,24 +42,14 @@ class ProjectResource extends Resource
                             ->label('Project Name')
                             ->required()
                             ->maxLength(255),
-                        Forms\Components\Select::make('customer_id')
-                            ->relationship('customer', 'customer_name')
+                        Forms\Components\Select::make('vendor_id')
+                            ->relationship(
+                                'vendor',
+                                'vendor_name',
+                                fn ($query) => $query->whereHas('vendorType', fn($q) => $q->where('type_name', 'Customer'))
+                            )
                             ->required()
                             ->searchable(),
-                        Forms\Components\DatePicker::make('start_date')
-                            ->required(),
-                        Forms\Components\DatePicker::make('end_date')
-                            ->required()
-                            ->after('start_date'),
-                        Forms\Components\Select::make('status')
-                            ->required()
-                            ->options([
-                                'planning' => 'Planning',
-                                'active' => 'Active',
-                                'completed' => 'Completed',
-                                'on_hold' => 'On Hold',
-                                'cancelled' => 'Cancelled',
-                            ]),
                         Forms\Components\Textarea::make('description')
                             ->maxLength(65535)
                             ->columnSpanFull(),
@@ -80,35 +70,13 @@ class ProjectResource extends Resource
                     ->label('Project Name')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('customer.customer_name')
+                Tables\Columns\TextColumn::make('vendor.vendor_name')
                     ->label('Customer')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('start_date')
-                    ->date()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('end_date')
-                    ->date()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'planning' => 'gray',
-                        'active' => 'success',
-                        'completed' => 'info',
-                        'on_hold' => 'warning',
-                        'cancelled' => 'danger',
-                    }),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'planning' => 'Planning',
-                        'active' => 'Active',
-                        'completed' => 'Completed',
-                        'on_hold' => 'On Hold',
-                        'cancelled' => 'Cancelled',
-                    ]),
+                //
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),

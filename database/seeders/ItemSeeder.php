@@ -11,15 +11,24 @@ class ItemSeeder extends Seeder
     public function run(): void
     {
         $partNumbers = PartNumber::all();
+        $statuses = ['baru', 'bekas', 'diterima', 'terjual', 'dipinjam', 'masa_sewa'];
 
         foreach ($partNumbers as $partNumber) {
-            // Buat 5 item untuk setiap part number
-            for ($i = 1; $i <= 5; $i++) {
+            // Buat 1 item untuk setiap status
+            foreach ($statuses as $status) {
                 Item::create([
                     'part_number_id' => $partNumber->part_number_id,
-                    'serial_number' => $partNumber->part_number . '-SN' . str_pad($i, 4, '0', STR_PAD_LEFT),
-                    'status' => 'available',
-                    'manufacture_date' => now()->subDays(rand(1, 365)),
+                    'serial_number' => $partNumber->part_number . '-' . strtoupper($status) . '-' . uniqid(),
+                    'status' => $status,
+                ]);
+            }
+
+            // Tambah beberapa item random jika diperlukan
+            for ($i = 1; $i <= 2; $i++) {
+                Item::create([
+                    'part_number_id' => $partNumber->part_number_id,
+                    'serial_number' => $partNumber->part_number . '-EXTRA-' . uniqid(),
+                    'status' => $statuses[array_rand($statuses)],
                 ]);
             }
         }

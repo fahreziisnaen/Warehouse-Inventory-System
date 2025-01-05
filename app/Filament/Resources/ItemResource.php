@@ -53,13 +53,13 @@ class ItemResource extends Resource
                             ->unique(),
                         Forms\Components\Select::make('status')
                             ->options([
-                                'available' => 'Available',
-                                'in_use' => 'In Use',
-                                'maintenance' => 'Maintenance',
-                                'broken' => 'Broken',
+                                'baru' => 'Baru',
+                                'bekas' => 'Bekas',
+                                'diterima' => 'Diterima',
+                                'terjual' => 'Terjual',
+                                'dipinjam' => 'Dipinjam',
+                                'masa_sewa' => 'Masa Sewa',
                             ])
-                            ->required(),
-                        Forms\Components\DatePicker::make('manufacture_date')
                             ->required(),
                     ])
                     ->columns(2),
@@ -78,23 +78,25 @@ class ItemResource extends Resource
                     ->searchable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'available' => 'success',
-                        'in_use' => 'warning',
-                        'maintenance' => 'danger',
-                        'disposed' => 'gray',
-                    }),
-                Tables\Columns\TextColumn::make('manufacture_date')
-                    ->date()
-                    ->sortable(),
+                    ->formatStateUsing(fn (string $state) => ucfirst($state))
+                    ->colors([
+                        'success' => fn ($state) => $state === 'baru',
+                        'warning' => fn ($state) => $state === 'bekas',
+                        'info' => fn ($state) => $state === 'diterima',
+                        'danger' => fn ($state) => $state === 'terjual',
+                        'gray' => fn ($state) => $state === 'dipinjam',
+                        'purple' => fn ($state) => $state === 'masa_sewa',
+                    ]),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->options([
-                        'available' => 'Available',
-                        'in_use' => 'In Use',
-                        'maintenance' => 'Maintenance',
-                        'disposed' => 'Disposed',
+                        'baru' => 'Baru',
+                        'bekas' => 'Bekas',
+                        'diterima' => 'Diterima',
+                        'terjual' => 'Terjual',
+                        'dipinjam' => 'Dipinjam',
+                        'masa_sewa' => 'Masa Sewa',
                     ]),
             ])
             ->actions([
