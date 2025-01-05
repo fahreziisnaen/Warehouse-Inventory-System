@@ -12,6 +12,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Actions\Action;
+use Illuminate\Database\Eloquent\Collection;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Model;
 
 class ItemResource extends Resource
 {
@@ -104,12 +108,30 @@ class ItemResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->hidden(fn ($record) => $record->status === 'terjual')
+                    ->before(function ($record) {
+                        if ($record->status === 'terjual') {
+                            Notification::make()
+                                ->danger()
+                                ->title('Item tidak dapat diedit')
+                                ->body('Item yang sudah terjual tidak dapat diubah.')
+                                ->send();
+
+                            return false;
+                        }
+                    }),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->hidden(function (?Collection $records): bool {
+                            if (!$records) {
+                                return false;
+                            }
+                            return $records->contains('status', 'terjual');
+                        }),
                 ]),
             ]);
     }
@@ -128,5 +150,10 @@ class ItemResource extends Resource
             'create' => Pages\CreateItem::route('/create'),
             'edit' => Pages\EditItem::route('/{record}/edit'),
         ];
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return $record->status !== 'terjual';
     }
 }

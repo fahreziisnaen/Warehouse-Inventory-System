@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             BrandSeeder::class,
             PartNumberSeeder::class,
             ItemSeeder::class,
+            ProjectStatusSeeder::class,
             ProjectSeeder::class,
             PurchaseOrderSeeder::class,
             InboundRecordSeeder::class,

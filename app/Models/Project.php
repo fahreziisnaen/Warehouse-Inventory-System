@@ -16,9 +16,7 @@ class Project extends Model
         'project_id',
         'project_name',
         'vendor_id',
-        'start_date',
-        'end_date',
-        'status',
+        'status_id',
         'description'
     ];
 
@@ -45,5 +43,10 @@ class Project extends Model
     public function outboundRecords(): HasMany
     {
         return $this->hasMany(OutboundRecord::class, 'project_id');
+    }
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(ProjectStatus::class, 'status_id', 'status_id');
     }
 } 

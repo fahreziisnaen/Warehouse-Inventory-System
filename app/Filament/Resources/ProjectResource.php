@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Columns\BadgeColumn;
 
 class ProjectResource extends Resource
 {
@@ -58,6 +59,12 @@ class ProjectResource extends Resource
                         Forms\Components\Textarea::make('description')
                             ->maxLength(65535)
                             ->columnSpanFull(),
+                        Forms\Components\Select::make('status_id')
+                            ->relationship('status', 'name')
+                            ->label('Status Project')
+                            ->required()
+                            ->preload()
+                            ->searchable(),
                     ])
                     ->columns(2),
             ]);
@@ -79,6 +86,12 @@ class ProjectResource extends Resource
                     ->label('Customer')
                     ->sortable()
                     ->searchable(),
+                BadgeColumn::make('status.name')
+                    ->label('Status')
+                    ->colors([
+                        'success' => 'Aktif',
+                        'danger' => 'Tidak Aktif',
+                    ]),
             ])
             ->filters([
                 //
