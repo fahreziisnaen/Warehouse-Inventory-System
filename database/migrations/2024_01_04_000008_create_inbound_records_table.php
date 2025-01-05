@@ -13,7 +13,6 @@ return new class extends Migration
             $table->string('lpb_number')->unique();
             $table->date('receive_date');
             $table->foreignId('po_id')->constrained('purchase_orders', 'po_id');
-            $table->string('status');
             $table->string('project_id');
             $table->foreign('project_id')->references('project_id')->on('projects');
             $table->timestamps();

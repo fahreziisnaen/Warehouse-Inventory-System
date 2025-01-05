@@ -35,28 +35,21 @@ class InboundRecordResource extends Resource
                             ->label('LPB Number')
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true)
-                            ->regex('/^LPB-\d{6}$/')
-                            ->validationMessages([
-                                'regex' => 'Format harus LPB-XXXXXX (X=angka)',
-                            ]),
+                            ->unique(ignoreRecord: true),
                         Forms\Components\DatePicker::make('receive_date')
+                            ->label('Receive Date')
                             ->required(),
                         Forms\Components\Select::make('po_id')
                             ->relationship('purchaseOrder', 'po_number')
+                            ->label('Purchase Order')
                             ->required()
+                            ->preload()
                             ->searchable(),
-                        Forms\Components\Select::make('status')
-                            ->required()
-                            ->options([
-                                'pending' => 'Pending',
-                                'received' => 'Received',
-                                'partial' => 'Partial',
-                                'rejected' => 'Rejected',
-                            ]),
                         Forms\Components\Select::make('project_id')
                             ->relationship('project', 'project_name')
+                            ->label('Project')
                             ->required()
+                            ->preload()
                             ->searchable(),
                     ])
                     ->columns(2),
@@ -66,15 +59,27 @@ class InboundRecordResource extends Resource
                             ->relationship()
                             ->schema([
                                 Forms\Components\Select::make('item_id')
-                                    ->relationship('item', 'serial_number')
+                                    ->relationship(
+                                        'item', 
+                                        'serial_number',
+                                        fn (Builder $query) => $query
+                                            ->where('status', 'diterima')
+                                    )
+                                    ->label('Serial Number')
                                     ->required()
+                                    ->preload()
                                     ->searchable(),
                                 Forms\Components\TextInput::make('quantity')
+                                    ->label('Quantity')
                                     ->required()
                                     ->numeric()
-                                    ->minValue(1),
+                                    ->default(1)
+                                    ->disabled()
+                                    ->minValue(1)
+                                    ->maxValue(1),
                             ])
-                            ->columns(2),
+                            ->columns(2)
+                            ->defaultItems(1),
                     ]),
             ]);
     }
@@ -88,33 +93,25 @@ class InboundRecordResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('receive_date')
+                    ->label('Receive Date')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('purchaseOrder.po_number')
-                    ->label('PO Number')
-                    ->sortable()
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pending' => 'warning',
-                        'received' => 'success',
-                        'partial' => 'info',
-                        'rejected' => 'danger',
-                    }),
+                    ->label('Purchase Order')
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('project.project_name')
                     ->label('Project')
                     ->sortable()
                     ->searchable(),
+                Tables\Columns\TextColumn::make('inboundItems.item.serial_number')
+                    ->label('Serial Numbers')
+                    ->listWithLineBreaks()
+                    ->limitList(3)
+                    ->expandableLimitedList()
+                    ->searchable(),
             ])
             ->filters([
-                SelectFilter::make('status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'received' => 'Received',
-                        'partial' => 'Partial',
-                        'rejected' => 'Rejected',
-                    ]),
                 Filter::make('receive_date')
                     ->form([
                         Forms\Components\DatePicker::make('from')

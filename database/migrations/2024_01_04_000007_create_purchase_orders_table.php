@@ -15,7 +15,6 @@ return new class extends Migration
             $table->foreignId('vendor_id')->constrained('vendors', 'vendor_id');
             $table->string('project_id');
             $table->foreign('project_id')->references('project_id')->on('projects');
-            $table->decimal('total_amount', 10, 2);
             $table->timestamps();
         });
     }

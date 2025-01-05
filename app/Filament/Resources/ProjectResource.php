@@ -39,16 +39,21 @@ class ProjectResource extends Resource
                             ->maxLength(255)
                             ->unique(ignoreRecord: true),
                         Forms\Components\TextInput::make('project_name')
-                            ->label('Project Name')
+                            ->label('Nama Project')
                             ->required()
                             ->maxLength(255),
                         Forms\Components\Select::make('vendor_id')
                             ->relationship(
                                 'vendor',
                                 'vendor_name',
-                                fn ($query) => $query->whereHas('vendorType', fn($q) => $q->where('type_name', 'Customer'))
+                                fn (Builder $query) => $query
+                                    ->whereHas('vendorType', fn($q) => 
+                                        $q->where('type_name', 'Customer')
+                                    )
                             )
+                            ->label('Customer')
                             ->required()
+                            ->preload()
                             ->searchable(),
                         Forms\Components\Textarea::make('description')
                             ->maxLength(65535)
@@ -67,7 +72,7 @@ class ProjectResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('project_name')
-                    ->label('Project Name')
+                    ->label('Nama Project')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('vendor.vendor_name')

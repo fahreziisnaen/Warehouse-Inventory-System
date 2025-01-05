@@ -28,7 +28,7 @@ class Vendor extends Model
 
     public function projects(): HasMany
     {
-        return $this->hasMany(Project::class, 'vendor_id');
+        return $this->hasMany(Project::class, 'vendor_id', 'vendor_id');
     }
 
     public function outboundRecords(): HasMany

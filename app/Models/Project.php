@@ -29,7 +29,7 @@ class Project extends Model
 
     public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class, 'vendor_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'vendor_id');
     }
 
     public function purchaseOrders(): HasMany

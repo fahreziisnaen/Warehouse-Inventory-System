@@ -13,22 +13,27 @@ class PurchaseOrderSeeder extends Seeder
     {
         $suppliers = Vendor::suppliers()->get();
         $projects = Project::all();
-        $poCounter = 1;
+        $year = date('Y');
+        $counter = 1;
 
         foreach ($projects as $project) {
             // Buat 2 PO untuk setiap project
             for ($i = 1; $i <= 2; $i++) {
-                $poNumber = 'PO-' . date('Ym') . '-' . str_pad($poCounter, 4, '0', STR_PAD_LEFT);
+                $poNumber = sprintf(
+                    "PO/%s/%s/%04d",
+                    substr($project->project_id, 4, 3), // Mengambil kode customer
+                    $year,
+                    $counter
+                );
                 
                 PurchaseOrder::create([
                     'po_number' => $poNumber,
                     'po_date' => now()->subDays(rand(1, 30)),
                     'vendor_id' => $suppliers->random()->vendor_id,
                     'project_id' => $project->project_id,
-                    'total_amount' => rand(1000000, 50000000),
                 ]);
 
-                $poCounter++;
+                $counter++;
             }
         }
     }

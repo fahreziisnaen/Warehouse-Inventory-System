@@ -35,27 +35,29 @@ class PurchaseOrderResource extends Resource
                             ->label('PO Number')
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true)
-                            ->regex('/^PO-\d{6}$/')
-                            ->validationMessages([
-                                'regex' => 'Format harus PO-XXXXXX (X=angka)',
-                            ]),
+                            ->unique(ignoreRecord: true),
                         Forms\Components\DatePicker::make('po_date')
                             ->label('PO Date')
                             ->required(),
-                        Forms\Components\Select::make('supplier_id')
-                            ->relationship('supplier', 'supplier_name')
+                        Forms\Components\Select::make('vendor_id')
+                            ->relationship(
+                                'vendor', 
+                                'vendor_name',
+                                fn (Builder $query) => $query
+                                    ->whereHas('vendorType', fn($q) => 
+                                        $q->where('type_name', 'Supplier')
+                                    )
+                            )
+                            ->label('Supplier')
                             ->required()
+                            ->preload()
                             ->searchable(),
                         Forms\Components\Select::make('project_id')
                             ->relationship('project', 'project_name')
+                            ->label('Project')
                             ->required()
+                            ->preload()
                             ->searchable(),
-                        Forms\Components\TextInput::make('total_amount')
-                            ->required()
-                            ->numeric()
-                            ->prefix('Rp')
-                            ->maxValue(42949672.95),
                     ])
                     ->columns(2),
             ]);
@@ -73,7 +75,7 @@ class PurchaseOrderResource extends Resource
                     ->label('PO Date')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('supplier.supplier_name')
+                Tables\Columns\TextColumn::make('vendor.vendor_name')
                     ->label('Supplier')
                     ->sortable()
                     ->searchable(),
@@ -81,9 +83,6 @@ class PurchaseOrderResource extends Resource
                     ->label('Project')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('total_amount')
-                    ->money('idr')
-                    ->sortable(),
             ])
             ->filters([
                 Filter::make('po_date')
@@ -104,8 +103,8 @@ class PurchaseOrderResource extends Resource
                                 fn (Builder $query, $date): Builder => $query->whereDate('po_date', '<=', $date),
                             );
                     }),
-                SelectFilter::make('supplier')
-                    ->relationship('supplier', 'supplier_name'),
+                SelectFilter::make('vendor')
+                    ->relationship('vendor', 'vendor_name'),
                 SelectFilter::make('project')
                     ->relationship('project', 'project_name'),
             ])

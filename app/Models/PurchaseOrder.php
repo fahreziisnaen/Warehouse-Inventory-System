@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PurchaseOrder extends Model
 {
@@ -14,27 +14,25 @@ class PurchaseOrder extends Model
         'po_number',
         'po_date',
         'vendor_id',
-        'project_id',
-        'total_amount'
+        'project_id'
     ];
 
     protected $casts = [
-        'po_date' => 'date',
-        'total_amount' => 'decimal:2'
+        'po_date' => 'date'
     ];
 
     public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class, 'vendor_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'vendor_id');
     }
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class, 'project_id');
+        return $this->belongsTo(Project::class, 'project_id', 'project_id');
     }
 
-    public function inboundRecord(): HasOne
+    public function inboundRecords(): HasMany
     {
-        return $this->hasOne(InboundRecord::class, 'po_id');
+        return $this->hasMany(InboundRecord::class, 'po_id', 'po_id');
     }
 } 
