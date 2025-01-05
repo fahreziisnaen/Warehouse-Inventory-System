@@ -12,26 +12,18 @@ class StatsOverview extends BaseWidget
 {
     protected function getStats(): array
     {
-        $currentMonth = now()->month;
-        
         return [
-            Stat::make('Total Inbound This Month', 
-                InboundRecord::whereMonth('receive_date', $currentMonth)->count()
-            )
+            Stat::make('Total Barang Masuk Bulan Ini', InboundRecord::whereMonth('receive_date', now()->month)->count())
                 ->description('Jumlah barang masuk bulan ini')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success'),
-            
-            Stat::make('Total Outbound This Month', 
-                OutboundRecord::whereMonth('delivery_date', $currentMonth)->count()
-            )
+
+            Stat::make('Total Barang Keluar Bulan Ini', OutboundRecord::whereMonth('delivery_date', now()->month)->count())
                 ->description('Jumlah barang keluar bulan ini')
                 ->descriptionIcon('heroicon-m-arrow-trending-down')
                 ->color('danger'),
-            
-            Stat::make('Available Items', 
-                Item::whereIn('status', ['baru', 'bekas', 'diterima'])->count()
-            )
+
+            Stat::make('Total Barang Di Gudang', Item::where('status', 'diterima')->count())
                 ->description('Jumlah barang tersedia')
                 ->descriptionIcon('heroicon-m-cube')
                 ->color('info'),
