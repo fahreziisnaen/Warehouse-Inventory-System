@@ -13,7 +13,6 @@ class OutboundRecordSeeder extends Seeder
     {
         $customers = Vendor::customers()->get();
         $projects = Project::all();
-        $year = date('Y');
         $counter = 1;
 
         foreach ($projects as $project) {
@@ -23,7 +22,7 @@ class OutboundRecordSeeder extends Seeder
                 $lkbNumber = sprintf(
                     "LKB/%s/%s/%04d",
                     substr($project->project_id, 4, 3),
-                    $year,
+                    date('Y'),
                     $counter
                 );
                 

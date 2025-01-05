@@ -32,13 +32,15 @@ class InboundRecordResource extends Resource
                 Forms\Components\Card::make()
                     ->schema([
                         Forms\Components\TextInput::make('lpb_number')
-                            ->label('LPB Number')
+                            ->label('Nomor LPB')
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true),
+                            ->unique(ignoreRecord: true)
+                            ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\DatePicker::make('receive_date')
-                            ->label('Receive Date')
-                            ->required(),
+                            ->label('Tanggal Penerimaan Barang')
+                            ->required()
+                            ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('po_id')
                             ->relationship('purchaseOrder', 'po_number')
                             ->label('Purchase Order')
@@ -46,11 +48,12 @@ class InboundRecordResource extends Resource
                             ->preload()
                             ->searchable(),
                         Forms\Components\Select::make('project_id')
-                            ->relationship('project', 'project_name')
-                            ->label('Project')
+                            ->relationship('project', 'project_id')
+                            ->label('Project ID')
                             ->required()
                             ->preload()
-                            ->searchable(),
+                            ->searchable()
+                            ->disabled(fn ($context) => $context === 'view'),
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Items')
@@ -69,9 +72,7 @@ class InboundRecordResource extends Resource
                                                 fn (Builder $query) => $query->orWhereIn('item_id', $record->inboundItems->pluck('item_id'))
                                             )
                                     )
-                                    ->getOptionLabelFromRecordUsing(fn ($record) => 
-                                        "{$record->serial_number} ({$record->status})"
-                                    )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->serial_number)
                                     ->formatStateUsing(function ($state, $record) {
                                         if ($state) {
                                             $item = \App\Models\Item::find($state);
@@ -123,19 +124,19 @@ class InboundRecordResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('lpb_number')
-                    ->label('LPB Number')
+                    ->label('Nomor LPB')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('receive_date')
-                    ->label('Receive Date')
+                    ->label('Tanggal Penerimaan Barang')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('purchaseOrder.po_number')
                     ->label('Purchase Order')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('project.project_name')
-                    ->label('Project')
+                Tables\Columns\TextColumn::make('project.project_id')
+                    ->label('Project ID')
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('inboundItems.item.serial_number')
@@ -149,9 +150,9 @@ class InboundRecordResource extends Resource
                 Filter::make('receive_date')
                     ->form([
                         Forms\Components\DatePicker::make('from')
-                            ->label('From Date'),
+                            ->label('Dari Tanggal'),
                         Forms\Components\DatePicker::make('until')
-                            ->label('Until Date'),
+                            ->label('Sampai Tanggal'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query

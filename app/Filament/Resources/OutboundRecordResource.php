@@ -53,8 +53,8 @@ class OutboundRecordResource extends Resource
                             ->searchable()
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('project_id')
-                            ->relationship('project', 'project_name')
-                            ->label('Project')
+                            ->relationship('project', 'project_id')
+                            ->label('Project ID')
                             ->required()
                             ->preload()
                             ->searchable()
@@ -150,8 +150,8 @@ class OutboundRecordResource extends Resource
                     ->label('Customer')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('project.project_name')
-                    ->label('Project')
+                Tables\Columns\TextColumn::make('project.project_id')
+                    ->label('Project ID')
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('outboundItems.item.serial_number')
