@@ -11,12 +11,14 @@ class OutboundItemSeeder extends Seeder
 {
     public function run(): void
     {
-        $outboundRecords = OutboundRecord::all();
+        $outboundRecords = OutboundRecord::with('purpose')->get();
+        
+        // Hanya ambil item yang sudah diterima
         $items = Item::where('status', 'diterima')->get();
 
         foreach ($outboundRecords as $outbound) {
-            // Ambil 1-2 item yang tersedia
-            $numItems = min(rand(1, 2), $items->count());
+            // Tambah jumlah item per outbound (dari 1-2 menjadi 2-4)
+            $numItems = min(rand(2, 4), $items->count());
             
             if ($numItems > 0) {
                 $randomItems = $items->random($numItems);

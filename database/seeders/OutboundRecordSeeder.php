@@ -23,11 +23,13 @@ class OutboundRecordSeeder extends Seeder
         // Hanya jalankan seeder jika ada item yang tersedia
         if ($availableItems > 0) {
             $counter = 1;
-
-            foreach ($projects as $project) {
-                // Buat 1-2 outbound untuk setiap project
-                $numOutbounds = rand(1, 2);
-                for ($i = 1; $i <= $numOutbounds; $i++) {
+            
+            // Buat outbound untuk setiap purpose
+            foreach ($purposes as $purpose) {
+                // Tambah jumlah project per purpose (dari 3 menjadi 4-5)
+                $selectedProjects = $projects->random(min(rand(4, 5), $projects->count()));
+                
+                foreach ($selectedProjects as $project) {
                     $lkbNumber = sprintf(
                         "LKB/%s/%s/%04d",
                         substr($project->project_id, 4, 3),
@@ -40,7 +42,7 @@ class OutboundRecordSeeder extends Seeder
                         'delivery_date' => now()->subDays(rand(1, 30)),
                         'vendor_id' => $customers->random()->vendor_id,
                         'project_id' => $project->project_id,
-                        'purpose_id' => $purposes->random()->purpose_id,
+                        'purpose_id' => $purpose->purpose_id,
                     ]);
 
                     $counter++;

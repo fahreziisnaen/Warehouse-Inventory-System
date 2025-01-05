@@ -48,38 +48,20 @@ class ItemSeeder extends Seeder
     public function run(): void
     {
         $partNumbers = PartNumber::with('brand')->get();
-        $statuses = [
-            'baru', 
-            'bekas', 
-            'diterima', 
-            'terjual',
-            'masa_sewa',
-            'dipinjam', 
-            'sewa_habis'
-        ];
+        $initialStatuses = ['baru', 'bekas'];
 
         foreach ($partNumbers as $partNumber) {
-            // Buat 1 item untuk setiap status
-            foreach ($statuses as $status) {
+            // Tambah jumlah item per part number (dari 8-12 menjadi 15-20)
+            $numItems = rand(15, 20);
+            
+            for ($i = 0; $i < $numItems; $i++) {
                 Item::create([
                     'part_number_id' => $partNumber->part_number_id,
                     'serial_number' => $this->generateSerialNumber(
                         $partNumber->brand->brand_name,
                         $partNumber->part_number
                     ),
-                    'status' => $status,
-                ]);
-            }
-
-            // Tambah beberapa item random
-            for ($i = 1; $i <= 2; $i++) {
-                Item::create([
-                    'part_number_id' => $partNumber->part_number_id,
-                    'serial_number' => $this->generateSerialNumber(
-                        $partNumber->brand->brand_name,
-                        $partNumber->part_number
-                    ),
-                    'status' => $statuses[array_rand($statuses)],
+                    'status' => $initialStatuses[array_rand($initialStatuses)],
                 ]);
             }
         }

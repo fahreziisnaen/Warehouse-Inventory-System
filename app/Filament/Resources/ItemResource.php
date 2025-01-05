@@ -56,15 +56,14 @@ class ItemResource extends Resource
                             ->maxLength(255)
                             ->unique(),
                         Forms\Components\Select::make('status')
-                            ->options([
-                                'baru' => 'Baru',
-                                'bekas' => 'Bekas',
-                                'diterima' => 'Diterima',
-                                'terjual' => 'Terjual',
-                                'masa_sewa' => 'Masa Sewa',
-                                'dipinjam' => 'Dipinjam',
-                                'sewa_habis' => 'Sewa Habis',
-                            ])
+                            ->options(function (Forms\Get $get, ?Model $record) {
+                                // Jika sedang create, hanya tampilkan status awal
+                                if (!$record) {
+                                    return Item::getInitialStatuses();
+                                }
+                                // Jika sedang edit, tampilkan semua status
+                                return Item::getStatuses();
+                            })
                             ->required(),
                     ])
                     ->columns(2),
