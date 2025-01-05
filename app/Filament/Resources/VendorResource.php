@@ -10,6 +10,10 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class VendorResource extends Resource
 {
@@ -83,7 +87,8 @@ class VendorResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]));
     }
 
     public static function getRelations(): array
@@ -98,6 +103,7 @@ class VendorResource extends Resource
         return [
             'index' => Pages\ListVendors::route('/'),
             'create' => Pages\CreateVendor::route('/create'),
+            'view' => Pages\ViewVendor::route('/{record}'),
             'edit' => Pages\EditVendor::route('/{record}/edit'),
         ];
     }
@@ -120,5 +126,72 @@ class VendorResource extends Resource
     public static function getNavigationGroup(): ?string
     {
         return 'Master Data';
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Vendor')
+                    ->schema([
+                        TextEntry::make('vendor_name')
+                            ->label('Nama Vendor'),
+                        TextEntry::make('vendorType.type_name')
+                            ->label('Tipe'),
+                        TextEntry::make('address')
+                            ->label('Alamat')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+
+                Section::make('Projects')
+                    ->schema([
+                        RepeatableEntry::make('projects')
+                            ->schema([
+                                TextEntry::make('project_id')
+                                    ->label('Project ID'),
+                                TextEntry::make('project_name')
+                                    ->label('Nama Project'),
+                                TextEntry::make('status.name')
+                                    ->label('Status'),
+                            ])
+                            ->columns(3)
+                            ->visible(fn ($record) => $record->vendorType->type_name === 'Customer')
+                    ]),
+
+                Section::make('Purchase Orders')
+                    ->schema([
+                        RepeatableEntry::make('purchaseOrders')
+                            ->schema([
+                                TextEntry::make('po_number')
+                                    ->label('Nomor PO'),
+                                TextEntry::make('po_date')
+                                    ->label('Tanggal PO')
+                                    ->date(),
+                                TextEntry::make('project.project_name')
+                                    ->label('Project'),
+                            ])
+                            ->columns(3)
+                            ->visible(fn ($record) => $record->vendorType->type_name === 'Supplier')
+                    ]),
+
+                Section::make('Barang Keluar')
+                    ->schema([
+                        RepeatableEntry::make('outboundRecords')
+                            ->schema([
+                                TextEntry::make('lkb_number')
+                                    ->label('Nomor LKB'),
+                                TextEntry::make('delivery_date')
+                                    ->label('Tanggal Keluar')
+                                    ->date(),
+                                TextEntry::make('project.project_name')
+                                    ->label('Project'),
+                                TextEntry::make('purpose.name')
+                                    ->label('Tujuan'),
+                            ])
+                            ->columns(4)
+                            ->visible(fn ($record) => $record->vendorType->type_name === 'Customer')
+                    ]),
+            ]);
     }
 } 

@@ -16,6 +16,10 @@ use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Collection;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class ItemResource extends Resource
 {
@@ -132,7 +136,8 @@ class ItemResource extends Resource
                             return $records->contains('status', 'terjual');
                         }),
                 ]),
-            ]);
+            ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]));
     }
 
     public static function getRelations(): array
@@ -147,6 +152,7 @@ class ItemResource extends Resource
         return [
             'index' => Pages\ListItems::route('/'),
             'create' => Pages\CreateItem::route('/create'),
+            'view' => Pages\ViewItem::route('/{record}'),
             'edit' => Pages\EditItem::route('/{record}/edit'),
         ];
     }
@@ -154,5 +160,74 @@ class ItemResource extends Resource
     public static function canEdit(Model $record): bool
     {
         return $record->status !== 'terjual';
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Item')
+                    ->schema([
+                        TextEntry::make('serial_number')
+                            ->label('Serial Number'),
+                        TextEntry::make('partNumber.part_number')
+                            ->label('Part Number'),
+                        TextEntry::make('partNumber.brand.brand_name')
+                            ->label('Brand'),
+                        TextEntry::make('status')
+                            ->label('Status')
+                            ->badge()
+                            ->formatStateUsing(fn (string $state) => ucfirst($state))
+                            ->color(fn (string $state): string => match ($state) {
+                                'baru' => 'success',
+                                'bekas' => 'warning',
+                                'diterima' => 'info',
+                                'terjual' => 'danger',
+                                'masa_sewa' => 'purple',
+                                'dipinjam' => 'secondary',
+                                'sewa_habis' => 'rose',
+                            }),
+                        TextEntry::make('partNumber.description')
+                            ->label('Deskripsi')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+
+                Section::make('Barang Masuk')
+                    ->schema([
+                        RepeatableEntry::make('inboundItems')
+                            ->schema([
+                                TextEntry::make('inboundRecord.lpb_number')
+                                    ->label('Nomor LPB'),
+                                TextEntry::make('inboundRecord.receive_date')
+                                    ->label('Tanggal Terima')
+                                    ->date(),
+                                TextEntry::make('inboundRecord.purchaseOrder.po_number')
+                                    ->label('Nomor PO'),
+                                TextEntry::make('inboundRecord.project.project_name')
+                                    ->label('Project'),
+                            ])
+                            ->columns(4)
+                    ]),
+
+                Section::make('Barang Keluar')
+                    ->schema([
+                        RepeatableEntry::make('outboundItems')
+                            ->schema([
+                                TextEntry::make('outboundRecord.lkb_number')
+                                    ->label('Nomor LKB'),
+                                TextEntry::make('outboundRecord.delivery_date')
+                                    ->label('Tanggal Keluar')
+                                    ->date(),
+                                TextEntry::make('outboundRecord.vendor.vendor_name')
+                                    ->label('Customer'),
+                                TextEntry::make('outboundRecord.project.project_name')
+                                    ->label('Project'),
+                                TextEntry::make('outboundRecord.purpose.name')
+                                    ->label('Tujuan'),
+                            ])
+                            ->columns(5)
+                    ]),
+            ]);
     }
 }

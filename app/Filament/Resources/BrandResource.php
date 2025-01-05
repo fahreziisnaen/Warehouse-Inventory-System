@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class BrandResource extends Resource
 {
@@ -108,13 +109,57 @@ class BrandResource extends Resource
                         TextEntry::make('brand_name')
                             ->label('Nama Brand'),
                         TextEntry::make('description')
-                            ->label('Deskripsi'),
-                        TextEntry::make('partNumbers_count')
-                            ->label('Jumlah Part Number')
+                            ->label('Deskripsi')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+
+                Section::make('Part Numbers')
+                    ->schema([
+                        RepeatableEntry::make('partNumbers')
+                            ->schema([
+                                TextEntry::make('part_number')
+                                    ->label('Part Number'),
+                                TextEntry::make('description')
+                                    ->label('Deskripsi')
+                                    ->limit(50),
+                                TextEntry::make('items_count')
+                                    ->label('Jumlah Item')
+                                    ->state(function ($record) {
+                                        return $record->items->count();
+                                    }),
+                                TextEntry::make('available_items_count')
+                                    ->label('Item Tersedia')
+                                    ->state(function ($record) {
+                                        return $record->items->whereIn('status', ['baru', 'bekas', 'diterima'])->count();
+                                    }),
+                            ])
+                            ->columns(4)
+                    ]),
+
+                Section::make('Statistik')
+                    ->schema([
+                        TextEntry::make('total_part_numbers')
+                            ->label('Total Part Numbers')
                             ->state(function ($record) {
-                                return $record->partNumbers()->count();
+                                return $record->partNumbers->count();
                             }),
-                    ])->columns(2)
+                        TextEntry::make('total_items')
+                            ->label('Total Items')
+                            ->state(function ($record) {
+                                return $record->partNumbers->sum(function ($partNumber) {
+                                    return $partNumber->items->count();
+                                });
+                            }),
+                        TextEntry::make('available_items')
+                            ->label('Items Tersedia')
+                            ->state(function ($record) {
+                                return $record->partNumbers->sum(function ($partNumber) {
+                                    return $partNumber->items->whereIn('status', ['baru', 'bekas', 'diterima'])->count();
+                                });
+                            }),
+                    ])
+                    ->columns(3),
             ]);
     }
 }
