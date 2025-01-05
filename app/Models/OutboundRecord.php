@@ -14,7 +14,8 @@ class OutboundRecord extends Model
         'lkb_number',
         'delivery_date',
         'vendor_id',
-        'project_id'
+        'project_id',
+        'purpose_id'
     ];
 
     protected $casts = [
@@ -34,5 +35,41 @@ class OutboundRecord extends Model
     public function outboundItems(): HasMany
     {
         return $this->hasMany(OutboundItem::class, 'outbound_id', 'outbound_id');
+    }
+
+    public function purpose(): BelongsTo
+    {
+        return $this->belongsTo(Purpose::class, 'purpose_id', 'purpose_id');
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($outboundRecord) {
+            // Update status item berdasarkan tujuan saat create
+            $purpose = $outboundRecord->purpose;
+            foreach ($outboundRecord->outboundItems as $outboundItem) {
+                $newStatus = match($purpose->name) {
+                    'Sewa' => 'masa_sewa',
+                    'Pembelian' => 'terjual',
+                    'Peminjaman' => 'dipinjam',
+                    default => $outboundItem->item->status
+                };
+                $outboundItem->item->update(['status' => $newStatus]);
+            }
+        });
+
+        static::updated(function ($outboundRecord) {
+            // Update status item berdasarkan tujuan saat update
+            $purpose = $outboundRecord->purpose;
+            foreach ($outboundRecord->outboundItems as $outboundItem) {
+                $newStatus = match($purpose->name) {
+                    'Sewa' => 'masa_sewa',
+                    'Pembelian' => 'terjual',
+                    'Peminjaman' => 'dipinjam',
+                    default => $outboundItem->item->status
+                };
+                $outboundItem->item->update(['status' => $newStatus]);
+            }
+        });
     }
 } 

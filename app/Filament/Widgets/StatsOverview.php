@@ -27,6 +27,21 @@ class StatsOverview extends BaseWidget
                 ->description('Jumlah barang tersedia')
                 ->descriptionIcon('heroicon-m-cube')
                 ->color('info'),
+
+            Stat::make('Total Barang Disewa', Item::where('status', 'masa_sewa')->count())
+                ->description('Jumlah barang dalam masa sewa')
+                ->descriptionIcon('heroicon-m-clock')
+                ->color('warning'),
+
+            Stat::make('Total Barang Dibeli', Item::where('status', 'terjual')->count())
+                ->description('Jumlah barang terjual')
+                ->descriptionIcon('heroicon-m-shopping-cart')
+                ->color('success'),
+
+            Stat::make('Total Barang Dipinjam', Item::where('status', 'dipinjam')->count())
+                ->description('Jumlah barang dipinjam')
+                ->descriptionIcon('heroicon-m-hand-raised')
+                ->color('purple'),
         ];
     }
 } 

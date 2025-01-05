@@ -59,6 +59,13 @@ class OutboundRecordResource extends Resource
                             ->preload()
                             ->searchable()
                             ->disabled(fn ($context) => $context === 'view'),
+                        Forms\Components\Select::make('purpose_id')
+                            ->relationship('purpose', 'name')
+                            ->label('Tujuan')
+                            ->required()
+                            ->preload()
+                            ->searchable()
+                            ->disabled(fn ($context) => $context === 'view'),
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Items')
@@ -95,10 +102,23 @@ class OutboundRecordResource extends Resource
                                     ->preload()
                                     ->searchable()
                                     ->live()
-                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                    ->afterStateUpdated(function ($state, Forms\Set $set, $get) {
                                         if ($state) {
                                             $item = \App\Models\Item::find($state);
                                             $set('current_status', $item?->status);
+                                            
+                                            // Update status berdasarkan tujuan
+                                            $purposeId = $get('../../purpose_id');
+                                            if ($purposeId) {
+                                                $purpose = \App\Models\Purpose::find($purposeId);
+                                                $newStatus = match($purpose->name) {
+                                                    'Sewa' => 'masa_sewa',
+                                                    'Pembelian' => 'terjual',
+                                                    'Peminjaman' => 'dipinjam',
+                                                    default => $item?->status
+                                                };
+                                                $item->update(['status' => $newStatus]);
+                                            }
                                         }
                                     })
                                     ->disabled(fn ($context) => $context === 'view'),
@@ -159,6 +179,10 @@ class OutboundRecordResource extends Resource
                     ->listWithLineBreaks()
                     ->limitList(3)
                     ->expandableLimitedList()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('purpose.name')
+                    ->label('Tujuan')
+                    ->sortable()
                     ->searchable(),
             ])
             ->filters([

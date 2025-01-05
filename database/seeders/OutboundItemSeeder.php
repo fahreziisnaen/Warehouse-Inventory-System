@@ -27,10 +27,16 @@ class OutboundItemSeeder extends Seeder
                         'quantity' => 1,
                     ]);
 
-                    // Update status item menjadi masa_sewa
-                    $item->update(['status' => 'masa_sewa']);
+                    // Update status berdasarkan tujuan
+                    $newStatus = match($outbound->purpose->name) {
+                        'Sewa' => 'masa_sewa',
+                        'Pembelian' => 'terjual',
+                        'Peminjaman' => 'dipinjam',
+                        default => $item->status
+                    };
+                    $item->update(['status' => $newStatus]);
                     
-                    // Hapus item dari koleksi agar tidak dipilih lagi
+                    // Hapus item dari koleksi
                     $items = $items->where('item_id', '!=', $item->item_id);
                 }
             }
