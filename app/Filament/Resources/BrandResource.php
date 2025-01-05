@@ -12,6 +12,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
 
 class BrandResource extends Resource
 {
@@ -70,7 +73,8 @@ class BrandResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]));
     }
 
     public static function getRelations(): array
@@ -85,6 +89,7 @@ class BrandResource extends Resource
         return [
             'index' => Pages\ListBrands::route('/'),
             'create' => Pages\CreateBrand::route('/create'),
+            'view' => Pages\ViewBrand::route('/{record}'),
             'edit' => Pages\EditBrand::route('/{record}/edit'),
         ];
     }
@@ -92,5 +97,24 @@ class BrandResource extends Resource
     public static function getCreateButtonLabel(): string
     {
         return static::$createButtonLabel;
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Brand')
+                    ->schema([
+                        TextEntry::make('brand_name')
+                            ->label('Nama Brand'),
+                        TextEntry::make('description')
+                            ->label('Deskripsi'),
+                        TextEntry::make('partNumbers_count')
+                            ->label('Jumlah Part Number')
+                            ->state(function ($record) {
+                                return $record->partNumbers()->count();
+                            }),
+                    ])->columns(2)
+            ]);
     }
 }

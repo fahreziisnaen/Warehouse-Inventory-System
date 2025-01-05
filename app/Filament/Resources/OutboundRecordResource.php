@@ -11,6 +11,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\Filter;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class OutboundRecordResource extends Resource
 {
@@ -185,13 +189,14 @@ class OutboundRecordResource extends Resource
                     ->sortable()
                     ->searchable(),
             ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]))
             ->filters([
                 Filter::make('delivery_date')
                     ->form([
                         Forms\Components\DatePicker::make('from')
-                            ->label('From Date'),
+                            ->label('Dari Tanggal'),
                         Forms\Components\DatePicker::make('until')
-                            ->label('Until Date'),
+                            ->label('Sampai Tanggal'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -229,7 +234,44 @@ class OutboundRecordResource extends Resource
         return [
             'index' => Pages\ListOutboundRecords::route('/'),
             'create' => Pages\CreateOutboundRecord::route('/create'),
+            'view' => Pages\ViewOutboundRecord::route('/{record}'),
             'edit' => Pages\EditOutboundRecord::route('/{record}/edit'),
         ];
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Barang Keluar')
+                    ->schema([
+                        TextEntry::make('lkb_number')
+                            ->label('Nomor LKB'),
+                        TextEntry::make('delivery_date')
+                            ->label('Tanggal Keluar')
+                            ->date(),
+                        TextEntry::make('vendor.vendor_name')
+                            ->label('Customer'),
+                        TextEntry::make('project.project_id')
+                            ->label('Project ID'),
+                        TextEntry::make('purpose.name')
+                            ->label('Tujuan'),
+                    ])
+                    ->columns(2),
+                Section::make('Items')
+                    ->schema([
+                        RepeatableEntry::make('outboundItems')
+                            ->schema([
+                                TextEntry::make('item.serial_number')
+                                    ->label('Serial Number'),
+                                TextEntry::make('item.status')
+                                    ->label('Status')
+                                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
+                                TextEntry::make('quantity')
+                                    ->label('Quantity'),
+                            ])
+                            ->columns(3)
+                    ]),
+            ]);
     }
 }

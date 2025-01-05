@@ -14,6 +14,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class InboundRecordResource extends Resource
 {
@@ -146,6 +150,7 @@ class InboundRecordResource extends Resource
                     ->expandableLimitedList()
                     ->searchable(),
             ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]))
             ->filters([
                 Filter::make('receive_date')
                     ->form([
@@ -190,7 +195,42 @@ class InboundRecordResource extends Resource
         return [
             'index' => Pages\ListInboundRecords::route('/'),
             'create' => Pages\CreateInboundRecord::route('/create'),
+            'view' => Pages\ViewInboundRecord::route('/{record}'),
             'edit' => Pages\EditInboundRecord::route('/{record}/edit'),
         ];
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Barang Masuk')
+                    ->schema([
+                        TextEntry::make('lpb_number')
+                            ->label('Nomor LPB'),
+                        TextEntry::make('receive_date')
+                            ->label('Tanggal Penerimaan Barang')
+                            ->date(),
+                        TextEntry::make('purchaseOrder.po_number')
+                            ->label('Purchase Order'),
+                        TextEntry::make('project.project_id')
+                            ->label('Project ID'),
+                    ])
+                    ->columns(2),
+                Section::make('Items')
+                    ->schema([
+                        RepeatableEntry::make('inboundItems')
+                            ->schema([
+                                TextEntry::make('item.serial_number')
+                                    ->label('Serial Number'),
+                                TextEntry::make('item.status')
+                                    ->label('Status')
+                                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
+                                TextEntry::make('quantity')
+                                    ->label('Quantity'),
+                            ])
+                            ->columns(3)
+                    ]),
+            ]);
     }
 }

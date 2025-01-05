@@ -14,6 +14,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class PurchaseOrderResource extends Resource
 {
@@ -117,7 +121,8 @@ class PurchaseOrderResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]));
     }
 
     public static function getRelations(): array
@@ -132,7 +137,45 @@ class PurchaseOrderResource extends Resource
         return [
             'index' => Pages\ListPurchaseOrders::route('/'),
             'create' => Pages\CreatePurchaseOrder::route('/create'),
+            'view' => Pages\ViewPurchaseOrder::route('/{record}'),
             'edit' => Pages\EditPurchaseOrder::route('/{record}/edit'),
         ];
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Purchase Order')
+                    ->schema([
+                        TextEntry::make('po_number')
+                            ->label('Nomor PO'),
+                        TextEntry::make('po_date')
+                            ->label('Tanggal PO')
+                            ->date(),
+                        TextEntry::make('vendor.vendor_name')
+                            ->label('Supplier'),
+                        TextEntry::make('project.project_id')
+                            ->label('Project ID'),
+                    ])
+                    ->columns(2),
+                Section::make('Barang Masuk')
+                    ->schema([
+                        RepeatableEntry::make('inboundRecords')
+                            ->schema([
+                                TextEntry::make('lpb_number')
+                                    ->label('Nomor LPB'),
+                                TextEntry::make('receive_date')
+                                    ->label('Tanggal Terima')
+                                    ->date(),
+                                TextEntry::make('inboundItems_count')
+                                    ->label('Jumlah Item')
+                                    ->state(function ($record) {
+                                        return $record->inboundItems->count();
+                                    }),
+                            ])
+                            ->columns(3)
+                    ]),
+            ]);
     }
 }

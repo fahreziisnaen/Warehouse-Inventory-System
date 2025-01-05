@@ -8,6 +8,8 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
+use Filament\Support\Enums\FontWeight;
+use Illuminate\Support\HtmlString;
 
 class InventoryReport extends Page implements HasTable
 {
@@ -39,7 +41,12 @@ class InventoryReport extends Page implements HasTable
                 // Inbound Information (Left)
                 TextColumn::make('inboundItems.inboundRecord.lpb_number')
                     ->label('No. LPB')
-                    ->searchable(),
+                    ->searchable()
+                    ->url(fn ($record) => $record->inboundItems->first() 
+                        ? url('/admin/inbound-records/'.$record->inboundItems->first()->inbound_id)
+                        : null)
+                    ->weight(FontWeight::Bold)
+                    ->color('primary'),
                 TextColumn::make('inboundItems.inboundRecord.receive_date')
                     ->label('Tanggal Terima')
                     ->date()
@@ -48,7 +55,12 @@ class InventoryReport extends Page implements HasTable
                 // Outbound Information (Middle-Left)
                 TextColumn::make('outboundItems.outboundRecord.lkb_number')
                     ->label('No. LKB')
-                    ->searchable(),
+                    ->searchable()
+                    ->url(fn ($record) => $record->outboundItems->first() 
+                        ? url('/admin/outbound-records/'.$record->outboundItems->first()->outbound_id)
+                        : null)
+                    ->weight(FontWeight::Bold)
+                    ->color('primary'),
                 TextColumn::make('outboundItems.outboundRecord.delivery_date')
                     ->label('Tanggal Keluar')
                     ->date()
