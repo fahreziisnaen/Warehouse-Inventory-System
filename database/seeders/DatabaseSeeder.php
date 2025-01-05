@@ -18,8 +18,8 @@ class DatabaseSeeder extends Seeder
             ProjectSeeder::class,
             PurchaseOrderSeeder::class,
             InboundRecordSeeder::class,
-            OutboundRecordSeeder::class,
             InboundItemSeeder::class,
+            OutboundRecordSeeder::class,
             OutboundItemSeeder::class,
         ]);
     }

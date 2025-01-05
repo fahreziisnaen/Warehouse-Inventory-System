@@ -48,7 +48,15 @@ class ItemSeeder extends Seeder
     public function run(): void
     {
         $partNumbers = PartNumber::with('brand')->get();
-        $statuses = ['baru', 'bekas', 'diterima', 'terjual', 'dipinjam', 'masa_sewa'];
+        $statuses = [
+            'baru', 
+            'bekas', 
+            'diterima', 
+            'terjual',
+            'masa_sewa',
+            'dipinjam', 
+            'sewa_habis'
+        ];
 
         foreach ($partNumbers as $partNumber) {
             // Buat 1 item untuk setiap status

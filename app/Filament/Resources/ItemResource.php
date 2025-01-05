@@ -57,8 +57,9 @@ class ItemResource extends Resource
                                 'bekas' => 'Bekas',
                                 'diterima' => 'Diterima',
                                 'terjual' => 'Terjual',
-                                'dipinjam' => 'Dipinjam',
                                 'masa_sewa' => 'Masa Sewa',
+                                'dipinjam' => 'Dipinjam',
+                                'sewa_habis' => 'Sewa Habis',
                             ])
                             ->required(),
                     ])
@@ -84,8 +85,9 @@ class ItemResource extends Resource
                         'warning' => fn ($state) => $state === 'bekas',
                         'info' => fn ($state) => $state === 'diterima',
                         'danger' => fn ($state) => $state === 'terjual',
-                        'gray' => fn ($state) => $state === 'dipinjam',
                         'purple' => fn ($state) => $state === 'masa_sewa',
+                        'secondary' => fn ($state) => $state === 'dipinjam',
+                        'rose' => fn ($state) => $state === 'sewa_habis',
                     ]),
             ])
             ->filters([
@@ -95,8 +97,9 @@ class ItemResource extends Resource
                         'bekas' => 'Bekas',
                         'diterima' => 'Diterima',
                         'terjual' => 'Terjual',
-                        'dipinjam' => 'Dipinjam',
                         'masa_sewa' => 'Masa Sewa',
+                        'dipinjam' => 'Dipinjam',
+                        'sewa_habis' => 'Sewa Habis',
                     ]),
             ])
             ->actions([

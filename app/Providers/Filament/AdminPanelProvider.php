@@ -46,12 +46,14 @@ class AdminPanelProvider extends PanelProvider
             )
             ->colors([
                 'primary' => Color::Amber,
-                'danger' => Color::Rose,
-                'gray' => Color::Gray,
-                'info' => Color::Blue,
+                'secondary' => Color::Gray,
                 'success' => Color::Emerald,
                 'warning' => Color::Orange,
+                'danger' => Color::Rose,
+                'info' => Color::Blue,
                 'purple' => Color::Purple,
+                'gray' => Color::Gray,
+                'rose' => Color::Rose,
             ])
             ->navigationGroups([
                 NavigationGroup::make()

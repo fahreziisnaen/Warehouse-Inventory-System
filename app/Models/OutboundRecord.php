@@ -10,33 +10,29 @@ class OutboundRecord extends Model
 {
     protected $primaryKey = 'outbound_id';
     
-    protected static ?string $label = 'Barang Keluar';
-
     protected $fillable = [
         'lkb_number',
-        'delivery_note_number',
-        'outbound_date',
+        'delivery_date',
         'vendor_id',
-        'project_id',
-        'purpose'
+        'project_id'
     ];
 
     protected $casts = [
-        'outbound_date' => 'date'
+        'delivery_date' => 'date'
     ];
 
     public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class, 'vendor_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'vendor_id');
     }
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class, 'project_id');
+        return $this->belongsTo(Project::class, 'project_id', 'project_id');
     }
 
     public function outboundItems(): HasMany
     {
-        return $this->hasMany(OutboundItem::class, 'outbound_id');
+        return $this->hasMany(OutboundItem::class, 'outbound_id', 'outbound_id');
     }
 } 

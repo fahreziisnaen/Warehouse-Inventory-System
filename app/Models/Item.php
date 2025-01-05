@@ -18,8 +18,11 @@ class Item extends Model
     ];
 
     protected $casts = [
-        'manufacture_date' => 'date'
+        'manufacture_date' => 'date',
+        'status' => 'string'
     ];
+
+    protected $appends = ['status_label'];
 
     public function partNumber(): BelongsTo
     {
@@ -34,5 +37,10 @@ class Item extends Model
     public function outboundItems(): HasMany
     {
         return $this->hasMany(OutboundItem::class, 'item_id');
+    }
+
+    public function getStatusLabelAttribute(): string
+    {
+        return ucfirst($this->status);
     }
 } 

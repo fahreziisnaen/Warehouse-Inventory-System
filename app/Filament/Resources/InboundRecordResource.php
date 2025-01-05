@@ -62,13 +62,46 @@ class InboundRecordResource extends Resource
                                     ->relationship(
                                         'item', 
                                         'serial_number',
-                                        fn (Builder $query) => $query
-                                            ->where('status', 'diterima')
+                                        fn (Builder $query, $record) => $query
+                                            ->whereIn('status', ['baru', 'bekas', 'sewa_habis'])
+                                            ->when(
+                                                $record?->inboundItems,
+                                                fn (Builder $query) => $query->orWhereIn('item_id', $record->inboundItems->pluck('item_id'))
+                                            )
                                     )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => 
+                                        "{$record->serial_number} ({$record->status})"
+                                    )
+                                    ->formatStateUsing(function ($state, $record) {
+                                        if ($state) {
+                                            $item = \App\Models\Item::find($state);
+                                            return $item ? $item->serial_number : $state;
+                                        }
+                                        return $state;
+                                    })
                                     ->label('Serial Number')
                                     ->required()
                                     ->preload()
-                                    ->searchable(),
+                                    ->searchable()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                        if ($state) {
+                                            $item = \App\Models\Item::find($state);
+                                            $set('current_status', $item?->status);
+                                        }
+                                    })
+                                    ->disabled(fn ($context) => $context === 'view'),
+                                Forms\Components\TextInput::make('current_status')
+                                    ->label('Status')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->formatStateUsing(function ($state, $record) {
+                                        if ($record && $record->item) {
+                                            return ucfirst($record->item->status);
+                                        }
+                                        return ucfirst($state);
+                                    })
+                                    ->extraAttributes(['class' => 'text-center']),
                                 Forms\Components\TextInput::make('quantity')
                                     ->label('Quantity')
                                     ->required()
@@ -78,8 +111,9 @@ class InboundRecordResource extends Resource
                                     ->minValue(1)
                                     ->maxValue(1),
                             ])
-                            ->columns(2)
-                            ->defaultItems(1),
+                            ->columns(3)
+                            ->defaultItems(1)
+                            ->disabled(fn ($context) => $context === 'view'),
                     ]),
             ]);
     }
