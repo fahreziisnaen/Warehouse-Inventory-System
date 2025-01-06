@@ -15,6 +15,7 @@ use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
+use App\Models\BatchItem;
 
 class OutboundRecordResource extends Resource
 {
@@ -155,6 +156,42 @@ class OutboundRecordResource extends Resource
                             ->disableItemDeletion(fn ($context) => $context === 'view')
                             ->disableItemMovement(fn ($context) => $context === 'view'),
                     ]),
+                Forms\Components\Section::make('Batch Items')
+                    ->schema([
+                        Forms\Components\Select::make('part_number_id')
+                            ->relationship('partNumber', 'part_number')
+                            ->label('Part Number (Batch)')
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                if (!$state) {
+                                    $set('batch_quantity', null);
+                                    return;
+                                }
+                                
+                                // Get available quantity
+                                $batchItem = BatchItem::where('part_number_id', $state)->first();
+                                $set('available_quantity', $batchItem ? $batchItem->quantity : 0);
+                            }),
+                        Forms\Components\TextInput::make('batch_quantity')
+                            ->label('Quantity')
+                            ->numeric()
+                            ->minValue(1)
+                            ->visible(fn ($get) => $get('part_number_id'))
+                            ->rules([
+                                fn ($get): string => 'max:' . ($get('available_quantity') ?? 0),
+                            ])
+                            ->validationMessages([
+                                'max' => 'The quantity cannot exceed the available stock of :max units.',
+                            ]),
+                        Forms\Components\TextInput::make('available_quantity')
+                            ->label('Available Stock')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->visible(fn ($get) => $get('part_number_id')),
+                    ])
+                    ->columns(3),
             ]);
     }
 
@@ -272,6 +309,16 @@ class OutboundRecordResource extends Resource
                             ])
                             ->columns(3)
                     ]),
+                Section::make('Batch Items')
+                    ->schema([
+                        TextEntry::make('part_number_id')
+                            ->label('Part Number')
+                            ->formatStateUsing(fn ($record) => $record->partNumber?->part_number ?? '-'),
+                        TextEntry::make('batch_quantity')
+                            ->label('Quantity'),
+                    ])
+                    ->visible(fn ($record) => $record->part_number_id !== null)
+                    ->columns(2),
             ]);
     }
 }

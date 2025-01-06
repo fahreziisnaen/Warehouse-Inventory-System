@@ -14,11 +14,13 @@ class InboundRecord extends Model
         'lpb_number',
         'receive_date',
         'po_id',
-        'project_id'
+        'project_id',
+        'part_number_id',
+        'batch_quantity'
     ];
 
     protected $casts = [
-        'receive_date' => 'date'
+        'receive_date' => 'datetime',
     ];
 
     protected static ?string $label = 'Barang Masuk';
@@ -36,5 +38,15 @@ class InboundRecord extends Model
     public function inboundItems(): HasMany
     {
         return $this->hasMany(InboundItem::class, 'inbound_id');
+    }
+
+    public function batchItemHistories()
+    {
+        return $this->morphMany(BatchItemHistory::class, 'recordable');
+    }
+
+    public function partNumber(): BelongsTo
+    {
+        return $this->belongsTo(PartNumber::class, 'part_number_id');
     }
 } 

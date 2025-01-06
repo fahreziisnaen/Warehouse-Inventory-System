@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Reports;
 
 use App\Models\Item;
+use App\Models\BatchItem;
 use Filament\Pages\Page;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
@@ -10,6 +11,7 @@ use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Support\Enums\FontWeight;
 use Illuminate\Support\HtmlString;
+use Illuminate\Database\Eloquent\Builder;
 
 class InventoryReport extends Page implements HasTable
 {
@@ -17,6 +19,7 @@ class InventoryReport extends Page implements HasTable
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationGroup = 'Reports';
+    protected static ?string $navigationLabel = 'Inventory Report';
     protected static ?string $title = 'Inventory Report';
     protected static ?int $navigationSort = 1;
 
@@ -96,15 +99,47 @@ class InventoryReport extends Page implements HasTable
                     ->label('Serial Number')
                     ->searchable(),
             ])
-            ->defaultSort('outboundItems.outboundRecord.delivery_date', 'desc')
-            ->filters([
-                // 
+            ->defaultSort('outboundItems.outboundRecord.delivery_date', 'desc');
+    }
+
+    public function getBatchItemsTable(Table $table): Table
+    {
+        return $table
+            ->query(BatchItem::query()->with(['partNumber.brand', 'format']))
+            ->columns([
+                TextColumn::make('partNumber.brand.brand_name')
+                    ->label('Brand')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('partNumber.part_number')
+                    ->label('Part Number')
+                    ->sortable()
+                    ->searchable(),
+                TextColumn::make('partNumber.description')
+                    ->label('Description')
+                    ->searchable(),
+                TextColumn::make('format.name')
+                    ->label('Satuan')
+                    ->sortable(),
+                TextColumn::make('quantity')
+                    ->label('Stock')
+                    ->sortable()
+                    ->alignRight(),
             ])
-            ->actions([
-                //
-            ])
-            ->bulkActions([
-                //
-            ]);
+            ->defaultSort('partNumber.brand.brand_name');
+    }
+
+    protected function getHeaderWidgets(): array
+    {
+        return [
+            // Jika ingin menambahkan widget di atas tabel
+        ];
+    }
+
+    protected function getFooterWidgets(): array
+    {
+        return [
+            // Jika ingin menambahkan widget di bawah tabel
+        ];
     }
 }

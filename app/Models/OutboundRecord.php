@@ -15,11 +15,13 @@ class OutboundRecord extends Model
         'delivery_date',
         'vendor_id',
         'project_id',
-        'purpose_id'
+        'purpose_id',
+        'part_number_id',
+        'batch_quantity'
     ];
 
     protected $casts = [
-        'delivery_date' => 'date'
+        'delivery_date' => 'datetime',
     ];
 
     public function vendor(): BelongsTo
@@ -40,6 +42,16 @@ class OutboundRecord extends Model
     public function purpose(): BelongsTo
     {
         return $this->belongsTo(Purpose::class, 'purpose_id', 'purpose_id');
+    }
+
+    public function batchItemHistories()
+    {
+        return $this->morphMany(BatchItemHistory::class, 'recordable');
+    }
+
+    public function partNumber(): BelongsTo
+    {
+        return $this->belongsTo(PartNumber::class, 'part_number_id');
     }
 
     protected static function booted()

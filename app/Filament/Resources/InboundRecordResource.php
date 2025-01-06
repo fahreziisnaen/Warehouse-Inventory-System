@@ -120,6 +120,21 @@ class InboundRecordResource extends Resource
                             ->defaultItems(1)
                             ->disabled(fn ($context) => $context === 'view'),
                     ]),
+                Forms\Components\Section::make('Batch Items')
+                    ->schema([
+                        Forms\Components\Select::make('part_number_id')
+                            ->relationship('partNumber', 'part_number')
+                            ->label('Part Number (Batch)')
+                            ->searchable()
+                            ->preload()
+                            ->live(),
+                        Forms\Components\TextInput::make('batch_quantity')
+                            ->label('Quantity')
+                            ->numeric()
+                            ->minValue(1)
+                            ->visible(fn ($get) => $get('part_number_id')),
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -231,6 +246,16 @@ class InboundRecordResource extends Resource
                             ])
                             ->columns(3)
                     ]),
+                Section::make('Batch Items')
+                    ->schema([
+                        TextEntry::make('part_number_id')
+                            ->label('Part Number')
+                            ->formatStateUsing(fn ($record) => $record->partNumber?->part_number ?? '-'),
+                        TextEntry::make('batch_quantity')
+                            ->label('Quantity'),
+                    ])
+                    ->visible(fn ($record) => $record->part_number_id !== null)
+                    ->columns(2),
             ]);
     }
 }

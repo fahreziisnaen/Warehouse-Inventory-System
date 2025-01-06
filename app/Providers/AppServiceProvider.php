@@ -3,6 +3,14 @@
 namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
+use App\Models\InboundRecord;
+use App\Models\OutboundRecord;
+use App\Models\InboundItem;
+use App\Models\OutboundItem;
+use App\Observers\InboundRecordObserver;
+use App\Observers\OutboundRecordObserver;
+use App\Observers\InboundItemObserver;
+use App\Observers\OutboundItemObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,6 +27,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        InboundRecord::observe(InboundRecordObserver::class);
+        OutboundRecord::observe(OutboundRecordObserver::class);
+        InboundItem::observe(InboundItemObserver::class);
+        OutboundItem::observe(OutboundItemObserver::class);
     }
 }

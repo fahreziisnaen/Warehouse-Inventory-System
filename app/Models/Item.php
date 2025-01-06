@@ -11,10 +11,9 @@ class Item extends Model
     protected $primaryKey = 'item_id';
     
     protected $fillable = [
-        'part_number_id',
         'serial_number',
         'status',
-        'manufacture_date'
+        'part_number_id'
     ];
 
     protected $casts = [
@@ -71,5 +70,60 @@ class Item extends Model
     public function getStatusLabelAttribute(): string
     {
         return ucfirst($this->status);
+    }
+
+    public function updateLatestStatus()
+    {
+        // Ambil transaksi Inbound terbaru
+        $latestInbound = $this->inboundItems()
+            ->whereHas('inbound', function ($query) {
+                $query->orderBy('receive_date', 'desc');
+            })
+            ->first();
+
+        // Ambil transaksi Outbound terbaru
+        $latestOutbound = $this->outboundItems()
+            ->whereHas('outbound', function ($query) {
+                $query->orderBy('delivery_date', 'desc');
+            })
+            ->first();
+
+        // Bandingkan tanggal
+        if (!$latestInbound && !$latestOutbound) {
+            return; // Tidak ada transaksi
+        }
+
+        if (!$latestOutbound) {
+            $this->update(['status' => 'diterima']);
+            return;
+        }
+
+        if (!$latestInbound) {
+            $this->updateStatusFromOutbound($latestOutbound);
+            return;
+        }
+
+        $inboundDate = $latestInbound->inbound->receive_date;
+        $outboundDate = $latestOutbound->outbound->delivery_date;
+
+        if ($outboundDate > $inboundDate) {
+            // Jika outbound lebih baru, update status sesuai purpose
+            $this->updateStatusFromOutbound($latestOutbound);
+        } else {
+            // Jika inbound lebih baru, status = diterima
+            $this->update(['status' => 'diterima']);
+        }
+    }
+
+    private function updateStatusFromOutbound($outboundItem)
+    {
+        $purpose = $outboundItem->outbound->purpose->name;
+        $newStatus = match($purpose) {
+            'Sewa' => 'masa_sewa',
+            'Pembelian' => 'terjual',
+            'Peminjaman' => 'dipinjam',
+            default => $this->status
+        };
+        $this->update(['status' => $newStatus]);
     }
 } 
