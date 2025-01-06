@@ -12,6 +12,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class PartNumberResource extends Resource
 {
@@ -32,7 +36,9 @@ class PartNumberResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('brand_id')
                             ->relationship('brand', 'brand_name')
+                            ->label('Brand')
                             ->required()
+                            ->preload()
                             ->searchable(),
                         Forms\Components\TextInput::make('part_number')
                             ->required()
@@ -81,7 +87,8 @@ class PartNumberResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]));
     }
 
     public static function getRelations(): array
@@ -96,6 +103,7 @@ class PartNumberResource extends Resource
         return [
             'index' => Pages\ListPartNumbers::route('/'),
             'create' => Pages\CreatePartNumber::route('/create'),
+            'view' => Pages\ViewPartNumber::route('/{record}'),
             'edit' => Pages\EditPartNumber::route('/{record}/edit'),
         ];
     }
@@ -103,5 +111,79 @@ class PartNumberResource extends Resource
     public static function getCreateButtonLabel(): string
     {
         return static::$createButtonLabel;
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Part Number')
+                    ->schema([
+                        TextEntry::make('part_number')
+                            ->label('Part Number'),
+                        TextEntry::make('brand.brand_name')
+                            ->label('Brand'),
+                        TextEntry::make('description')
+                            ->label('Deskripsi')
+                            ->columnSpanFull(),
+                        TextEntry::make('specifications')
+                            ->label('Spesifikasi')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+
+                Section::make('Items')
+                    ->schema([
+                        RepeatableEntry::make('items')
+                            ->schema([
+                                TextEntry::make('serial_number')
+                                    ->label('Serial Number'),
+                                TextEntry::make('status')
+                                    ->label('Status')
+                                    ->badge()
+                                    ->formatStateUsing(fn (string $state) => ucfirst($state))
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'baru' => 'success',
+                                        'bekas' => 'warning',
+                                        'diterima' => 'info',
+                                        'terjual' => 'danger',
+                                        'masa_sewa' => 'purple',
+                                        'dipinjam' => 'secondary',
+                                        'sewa_habis' => 'rose',
+                                    }),
+                                TextEntry::make('inboundItems_count')
+                                    ->label('Jumlah Inbound')
+                                    ->state(function ($record) {
+                                        return $record->inboundItems->count();
+                                    }),
+                                TextEntry::make('outboundItems_count')
+                                    ->label('Jumlah Outbound')
+                                    ->state(function ($record) {
+                                        return $record->outboundItems->count();
+                                    }),
+                            ])
+                            ->columns(4)
+                    ]),
+
+                Section::make('Statistik')
+                    ->schema([
+                        TextEntry::make('items_count')
+                            ->label('Total Items')
+                            ->state(function ($record) {
+                                return $record->items->count();
+                            }),
+                        TextEntry::make('available_items_count')
+                            ->label('Items Tersedia')
+                            ->state(function ($record) {
+                                return $record->items->whereIn('status', ['baru', 'bekas', 'diterima'])->count();
+                            }),
+                        TextEntry::make('used_items_count')
+                            ->label('Items Terpakai')
+                            ->state(function ($record) {
+                                return $record->items->whereIn('status', ['terjual', 'masa_sewa', 'dipinjam'])->count();
+                            }),
+                    ])
+                    ->columns(3),
+            ]);
     }
 }

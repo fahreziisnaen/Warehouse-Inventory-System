@@ -12,6 +12,11 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class ProjectResource extends Resource
 {
@@ -39,30 +44,31 @@ class ProjectResource extends Resource
                             ->maxLength(255)
                             ->unique(ignoreRecord: true),
                         Forms\Components\TextInput::make('project_name')
-                            ->label('Project Name')
+                            ->label('Nama Project')
                             ->required()
                             ->maxLength(255),
-                        Forms\Components\Select::make('customer_id')
-                            ->relationship('customer', 'customer_name')
+                        Forms\Components\Select::make('vendor_id')
+                            ->relationship(
+                                'vendor',
+                                'vendor_name',
+                                fn (Builder $query) => $query
+                                    ->whereHas('vendorType', fn($q) => 
+                                        $q->where('type_name', 'Customer')
+                                    )
+                            )
+                            ->label('Customer')
                             ->required()
+                            ->preload()
                             ->searchable(),
-                        Forms\Components\DatePicker::make('start_date')
-                            ->required(),
-                        Forms\Components\DatePicker::make('end_date')
-                            ->required()
-                            ->after('start_date'),
-                        Forms\Components\Select::make('status')
-                            ->required()
-                            ->options([
-                                'planning' => 'Planning',
-                                'active' => 'Active',
-                                'completed' => 'Completed',
-                                'on_hold' => 'On Hold',
-                                'cancelled' => 'Cancelled',
-                            ]),
                         Forms\Components\Textarea::make('description')
                             ->maxLength(65535)
                             ->columnSpanFull(),
+                        Forms\Components\Select::make('status_id')
+                            ->relationship('status', 'name')
+                            ->label('Status Project')
+                            ->required()
+                            ->preload()
+                            ->searchable(),
                     ])
                     ->columns(2),
             ]);
@@ -77,38 +83,22 @@ class ProjectResource extends Resource
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('project_name')
-                    ->label('Project Name')
+                    ->label('Nama Project')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('customer.customer_name')
+                Tables\Columns\TextColumn::make('vendor.vendor_name')
                     ->label('Customer')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('start_date')
-                    ->date()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('end_date')
-                    ->date()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'planning' => 'gray',
-                        'active' => 'success',
-                        'completed' => 'info',
-                        'on_hold' => 'warning',
-                        'cancelled' => 'danger',
-                    }),
+                BadgeColumn::make('status.name')
+                    ->label('Status')
+                    ->colors([
+                        'success' => 'Aktif',
+                        'danger' => 'Tidak Aktif',
+                    ]),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
-                    ->options([
-                        'planning' => 'Planning',
-                        'active' => 'Active',
-                        'completed' => 'Completed',
-                        'on_hold' => 'On Hold',
-                        'cancelled' => 'Cancelled',
-                    ]),
+                //
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -119,7 +109,8 @@ class ProjectResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]));
     }
 
     public static function getRelations(): array
@@ -134,7 +125,83 @@ class ProjectResource extends Resource
         return [
             'index' => Pages\ListProjects::route('/'),
             'create' => Pages\CreateProject::route('/create'),
+            'view' => Pages\ViewProject::route('/{record}'),
             'edit' => Pages\EditProject::route('/{record}/edit'),
         ];
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Project')
+                    ->schema([
+                        TextEntry::make('project_id')
+                            ->label('Project ID'),
+                        TextEntry::make('project_name')
+                            ->label('Nama Project'),
+                        TextEntry::make('vendor.vendor_name')
+                            ->label('Customer'),
+                        TextEntry::make('status.name')
+                            ->label('Status'),
+                        TextEntry::make('description')
+                            ->label('Deskripsi')
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
+
+                Section::make('Purchase Orders')
+                    ->schema([
+                        RepeatableEntry::make('purchaseOrders')
+                            ->schema([
+                                TextEntry::make('po_number')
+                                    ->label('Nomor PO'),
+                                TextEntry::make('po_date')
+                                    ->label('Tanggal PO')
+                                    ->date(),
+                                TextEntry::make('vendor.vendor_name')
+                                    ->label('Supplier'),
+                            ])
+                            ->columns(3)
+                    ]),
+
+                Section::make('Barang Masuk')
+                    ->schema([
+                        RepeatableEntry::make('inboundRecords')
+                            ->schema([
+                                TextEntry::make('lpb_number')
+                                    ->label('Nomor LPB'),
+                                TextEntry::make('receive_date')
+                                    ->label('Tanggal Terima')
+                                    ->date(),
+                                TextEntry::make('inboundItems_count')
+                                    ->label('Jumlah Item')
+                                    ->state(function ($record) {
+                                        return $record->inboundItems->count();
+                                    }),
+                            ])
+                            ->columns(3)
+                    ]),
+
+                Section::make('Barang Keluar')
+                    ->schema([
+                        RepeatableEntry::make('outboundRecords')
+                            ->schema([
+                                TextEntry::make('lkb_number')
+                                    ->label('Nomor LKB'),
+                                TextEntry::make('delivery_date')
+                                    ->label('Tanggal Keluar')
+                                    ->date(),
+                                TextEntry::make('purpose.name')
+                                    ->label('Tujuan'),
+                                TextEntry::make('outboundItems_count')
+                                    ->label('Jumlah Item')
+                                    ->state(function ($record) {
+                                        return $record->outboundItems->count();
+                                    }),
+                            ])
+                            ->columns(4)
+                    ]),
+            ]);
     }
 }

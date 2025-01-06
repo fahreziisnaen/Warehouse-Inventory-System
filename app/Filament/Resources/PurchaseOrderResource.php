@@ -14,6 +14,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class PurchaseOrderResource extends Resource
 {
@@ -35,27 +39,29 @@ class PurchaseOrderResource extends Resource
                             ->label('PO Number')
                             ->required()
                             ->maxLength(255)
-                            ->unique(ignoreRecord: true)
-                            ->regex('/^PO-\d{6}$/')
-                            ->validationMessages([
-                                'regex' => 'Format harus PO-XXXXXX (X=angka)',
-                            ]),
+                            ->unique(ignoreRecord: true),
                         Forms\Components\DatePicker::make('po_date')
                             ->label('PO Date')
                             ->required(),
-                        Forms\Components\Select::make('supplier_id')
-                            ->relationship('supplier', 'supplier_name')
+                        Forms\Components\Select::make('vendor_id')
+                            ->relationship(
+                                'vendor', 
+                                'vendor_name',
+                                fn (Builder $query) => $query
+                                    ->whereHas('vendorType', fn($q) => 
+                                        $q->where('type_name', 'Supplier')
+                                    )
+                            )
+                            ->label('Supplier')
                             ->required()
+                            ->preload()
                             ->searchable(),
                         Forms\Components\Select::make('project_id')
                             ->relationship('project', 'project_name')
+                            ->label('Project')
                             ->required()
+                            ->preload()
                             ->searchable(),
-                        Forms\Components\TextInput::make('total_amount')
-                            ->required()
-                            ->numeric()
-                            ->prefix('Rp')
-                            ->maxValue(42949672.95),
                     ])
                     ->columns(2),
             ]);
@@ -73,7 +79,7 @@ class PurchaseOrderResource extends Resource
                     ->label('PO Date')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('supplier.supplier_name')
+                Tables\Columns\TextColumn::make('vendor.vendor_name')
                     ->label('Supplier')
                     ->sortable()
                     ->searchable(),
@@ -81,9 +87,6 @@ class PurchaseOrderResource extends Resource
                     ->label('Project')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('total_amount')
-                    ->money('idr')
-                    ->sortable(),
             ])
             ->filters([
                 Filter::make('po_date')
@@ -104,8 +107,8 @@ class PurchaseOrderResource extends Resource
                                 fn (Builder $query, $date): Builder => $query->whereDate('po_date', '<=', $date),
                             );
                     }),
-                SelectFilter::make('supplier')
-                    ->relationship('supplier', 'supplier_name'),
+                SelectFilter::make('vendor')
+                    ->relationship('vendor', 'vendor_name'),
                 SelectFilter::make('project')
                     ->relationship('project', 'project_name'),
             ])
@@ -118,7 +121,8 @@ class PurchaseOrderResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ]);
+            ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]));
     }
 
     public static function getRelations(): array
@@ -133,7 +137,45 @@ class PurchaseOrderResource extends Resource
         return [
             'index' => Pages\ListPurchaseOrders::route('/'),
             'create' => Pages\CreatePurchaseOrder::route('/create'),
+            'view' => Pages\ViewPurchaseOrder::route('/{record}'),
             'edit' => Pages\EditPurchaseOrder::route('/{record}/edit'),
         ];
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Purchase Order')
+                    ->schema([
+                        TextEntry::make('po_number')
+                            ->label('Nomor PO'),
+                        TextEntry::make('po_date')
+                            ->label('Tanggal PO')
+                            ->date(),
+                        TextEntry::make('vendor.vendor_name')
+                            ->label('Supplier'),
+                        TextEntry::make('project.project_id')
+                            ->label('Project ID'),
+                    ])
+                    ->columns(2),
+                Section::make('Barang Masuk')
+                    ->schema([
+                        RepeatableEntry::make('inboundRecords')
+                            ->schema([
+                                TextEntry::make('lpb_number')
+                                    ->label('Nomor LPB'),
+                                TextEntry::make('receive_date')
+                                    ->label('Tanggal Terima')
+                                    ->date(),
+                                TextEntry::make('inboundItems_count')
+                                    ->label('Jumlah Item')
+                                    ->state(function ($record) {
+                                        return $record->inboundItems->count();
+                                    }),
+                            ])
+                            ->columns(3)
+                    ]),
+            ]);
     }
 }

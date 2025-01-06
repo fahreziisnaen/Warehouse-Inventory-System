@@ -9,12 +9,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('projects', function (Blueprint $table) {
-            $table->id('project_id');
+            $table->string('project_id')->primary();
             $table->string('project_name');
-            $table->foreignId('customer_id')->constrained('customers', 'customer_id');
-            $table->date('start_date');
-            $table->date('end_date');
-            $table->string('status');
+            $table->foreignId('vendor_id')->constrained('vendors', 'vendor_id');
             $table->text('description')->nullable();
             $table->timestamps();
         });

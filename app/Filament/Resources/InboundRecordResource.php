@@ -14,6 +14,10 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\Section;
+use Filament\Infolists\Components\RepeatableEntry;
 
 class InboundRecordResource extends Resource
 {
@@ -32,32 +36,28 @@ class InboundRecordResource extends Resource
                 Forms\Components\Card::make()
                     ->schema([
                         Forms\Components\TextInput::make('lpb_number')
-                            ->label('LPB Number')
+                            ->label('Nomor LPB')
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
-                            ->regex('/^LPB-\d{6}$/')
-                            ->validationMessages([
-                                'regex' => 'Format harus LPB-XXXXXX (X=angka)',
-                            ]),
+                            ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\DatePicker::make('receive_date')
-                            ->required(),
+                            ->label('Tanggal Penerimaan Barang')
+                            ->required()
+                            ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('po_id')
                             ->relationship('purchaseOrder', 'po_number')
+                            ->label('Purchase Order')
                             ->required()
+                            ->preload()
                             ->searchable(),
-                        Forms\Components\Select::make('status')
-                            ->required()
-                            ->options([
-                                'pending' => 'Pending',
-                                'received' => 'Received',
-                                'partial' => 'Partial',
-                                'rejected' => 'Rejected',
-                            ]),
                         Forms\Components\Select::make('project_id')
-                            ->relationship('project', 'project_name')
+                            ->relationship('project', 'project_id')
+                            ->label('Project ID')
                             ->required()
-                            ->searchable(),
+                            ->preload()
+                            ->searchable()
+                            ->disabled(fn ($context) => $context === 'view'),
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Items')
@@ -66,15 +66,59 @@ class InboundRecordResource extends Resource
                             ->relationship()
                             ->schema([
                                 Forms\Components\Select::make('item_id')
-                                    ->relationship('item', 'serial_number')
+                                    ->relationship(
+                                        'item', 
+                                        'serial_number',
+                                        fn (Builder $query, $record) => $query
+                                            ->whereIn('status', ['baru', 'bekas', 'sewa_habis'])
+                                            ->when(
+                                                $record?->inboundItems,
+                                                fn (Builder $query) => $query->orWhereIn('item_id', $record->inboundItems->pluck('item_id'))
+                                            )
+                                    )
+                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->serial_number)
+                                    ->formatStateUsing(function ($state, $record) {
+                                        if ($state) {
+                                            $item = \App\Models\Item::find($state);
+                                            return $item ? $item->serial_number : $state;
+                                        }
+                                        return $state;
+                                    })
+                                    ->label('Serial Number')
                                     ->required()
-                                    ->searchable(),
+                                    ->preload()
+                                    ->searchable()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                        if ($state) {
+                                            $item = \App\Models\Item::find($state);
+                                            $set('current_status', $item?->status);
+                                        }
+                                    })
+                                    ->disabled(fn ($context) => $context === 'view'),
+                                Forms\Components\TextInput::make('current_status')
+                                    ->label('Status')
+                                    ->disabled()
+                                    ->dehydrated(false)
+                                    ->formatStateUsing(function ($state, $record) {
+                                        if ($record && $record->item) {
+                                            return ucfirst($record->item->status);
+                                        }
+                                        return ucfirst($state);
+                                    })
+                                    ->extraAttributes(['class' => 'text-center']),
                                 Forms\Components\TextInput::make('quantity')
+                                    ->label('Quantity')
                                     ->required()
                                     ->numeric()
-                                    ->minValue(1),
+                                    ->default(1)
+                                    ->disabled()
+                                    ->minValue(1)
+                                    ->maxValue(1),
                             ])
-                            ->columns(2),
+                            ->columns(3)
+                            ->defaultItems(1)
+                            ->disabled(fn ($context) => $context === 'view'),
                     ]),
             ]);
     }
@@ -84,43 +128,36 @@ class InboundRecordResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('lpb_number')
-                    ->label('LPB Number')
+                    ->label('Nomor LPB')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('receive_date')
+                    ->label('Tanggal Penerimaan Barang')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('purchaseOrder.po_number')
-                    ->label('PO Number')
+                    ->label('Purchase Order')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('project.project_id')
+                    ->label('Project ID')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->badge()
-                    ->color(fn (string $state): string => match ($state) {
-                        'pending' => 'warning',
-                        'received' => 'success',
-                        'partial' => 'info',
-                        'rejected' => 'danger',
-                    }),
-                Tables\Columns\TextColumn::make('project.project_name')
-                    ->label('Project')
-                    ->sortable()
+                Tables\Columns\TextColumn::make('inboundItems.item.serial_number')
+                    ->label('Serial Numbers')
+                    ->listWithLineBreaks()
+                    ->limitList(3)
+                    ->expandableLimitedList()
                     ->searchable(),
             ])
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]))
             ->filters([
-                SelectFilter::make('status')
-                    ->options([
-                        'pending' => 'Pending',
-                        'received' => 'Received',
-                        'partial' => 'Partial',
-                        'rejected' => 'Rejected',
-                    ]),
                 Filter::make('receive_date')
                     ->form([
                         Forms\Components\DatePicker::make('from')
-                            ->label('From Date'),
+                            ->label('Dari Tanggal'),
                         Forms\Components\DatePicker::make('until')
-                            ->label('Until Date'),
+                            ->label('Sampai Tanggal'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
@@ -158,7 +195,42 @@ class InboundRecordResource extends Resource
         return [
             'index' => Pages\ListInboundRecords::route('/'),
             'create' => Pages\CreateInboundRecord::route('/create'),
+            'view' => Pages\ViewInboundRecord::route('/{record}'),
             'edit' => Pages\EditInboundRecord::route('/{record}/edit'),
         ];
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Barang Masuk')
+                    ->schema([
+                        TextEntry::make('lpb_number')
+                            ->label('Nomor LPB'),
+                        TextEntry::make('receive_date')
+                            ->label('Tanggal Penerimaan Barang')
+                            ->date(),
+                        TextEntry::make('purchaseOrder.po_number')
+                            ->label('Purchase Order'),
+                        TextEntry::make('project.project_id')
+                            ->label('Project ID'),
+                    ])
+                    ->columns(2),
+                Section::make('Items')
+                    ->schema([
+                        RepeatableEntry::make('inboundItems')
+                            ->schema([
+                                TextEntry::make('item.serial_number')
+                                    ->label('Serial Number'),
+                                TextEntry::make('item.status')
+                                    ->label('Status')
+                                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
+                                TextEntry::make('quantity')
+                                    ->label('Quantity'),
+                            ])
+                            ->columns(3)
+                    ]),
+            ]);
     }
 }

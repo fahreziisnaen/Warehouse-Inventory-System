@@ -15,10 +15,8 @@ class Project extends Model
     protected $fillable = [
         'project_id',
         'project_name',
-        'customer_id',
-        'start_date',
-        'end_date',
-        'status',
+        'vendor_id',
+        'status_id',
         'description'
     ];
 
@@ -27,9 +25,9 @@ class Project extends Model
         'end_date' => 'date'
     ];
 
-    public function customer(): BelongsTo
+    public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'customer_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'vendor_id');
     }
 
     public function purchaseOrders(): HasMany
@@ -45,5 +43,10 @@ class Project extends Model
     public function outboundRecords(): HasMany
     {
         return $this->hasMany(OutboundRecord::class, 'project_id');
+    }
+
+    public function status(): BelongsTo
+    {
+        return $this->belongsTo(ProjectStatus::class, 'status_id', 'status_id');
     }
 } 

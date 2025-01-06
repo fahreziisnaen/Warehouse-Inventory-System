@@ -10,12 +10,8 @@ return new class extends Migration
     {
         Schema::create('inbound_items', function (Blueprint $table) {
             $table->id('inbound_item_id');
-            $table->foreignId('inbound_id')
-                ->constrained('inbound_records', 'inbound_id')
-                ->onDelete('cascade');
-            $table->foreignId('item_id')
-                ->constrained('items', 'item_id')
-                ->onDelete('cascade');
+            $table->foreignId('inbound_id')->constrained('inbound_records', 'inbound_id')->cascadeOnDelete();
+            $table->foreignId('item_id')->constrained('items', 'item_id');
             $table->integer('quantity');
             $table->timestamps();
         });

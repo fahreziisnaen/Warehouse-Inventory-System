@@ -14,7 +14,6 @@ class InboundRecord extends Model
         'lpb_number',
         'receive_date',
         'po_id',
-        'status',
         'project_id'
     ];
 
@@ -26,12 +25,12 @@ class InboundRecord extends Model
 
     public function purchaseOrder(): BelongsTo
     {
-        return $this->belongsTo(PurchaseOrder::class, 'po_id');
+        return $this->belongsTo(PurchaseOrder::class, 'po_id', 'po_id');
     }
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class, 'project_id');
+        return $this->belongsTo(Project::class, 'project_id', 'project_id');
     }
 
     public function inboundItems(): HasMany

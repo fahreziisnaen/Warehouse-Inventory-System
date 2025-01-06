@@ -10,33 +10,66 @@ class OutboundRecord extends Model
 {
     protected $primaryKey = 'outbound_id';
     
-    protected static ?string $label = 'Barang Keluar';
-
     protected $fillable = [
         'lkb_number',
-        'delivery_note_number',
-        'outbound_date',
-        'customer_id',
+        'delivery_date',
+        'vendor_id',
         'project_id',
-        'purpose'
+        'purpose_id'
     ];
 
     protected $casts = [
-        'outbound_date' => 'date'
+        'delivery_date' => 'date'
     ];
 
-    public function customer(): BelongsTo
+    public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Customer::class, 'customer_id');
+        return $this->belongsTo(Vendor::class, 'vendor_id', 'vendor_id');
     }
 
     public function project(): BelongsTo
     {
-        return $this->belongsTo(Project::class, 'project_id');
+        return $this->belongsTo(Project::class, 'project_id', 'project_id');
     }
 
     public function outboundItems(): HasMany
     {
-        return $this->hasMany(OutboundItem::class, 'outbound_id');
+        return $this->hasMany(OutboundItem::class, 'outbound_id', 'outbound_id');
+    }
+
+    public function purpose(): BelongsTo
+    {
+        return $this->belongsTo(Purpose::class, 'purpose_id', 'purpose_id');
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($outboundRecord) {
+            // Update status item berdasarkan tujuan saat create
+            $purpose = $outboundRecord->purpose;
+            foreach ($outboundRecord->outboundItems as $outboundItem) {
+                $newStatus = match($purpose->name) {
+                    'Sewa' => 'masa_sewa',
+                    'Pembelian' => 'terjual',
+                    'Peminjaman' => 'dipinjam',
+                    default => $outboundItem->item->status
+                };
+                $outboundItem->item->update(['status' => $newStatus]);
+            }
+        });
+
+        static::updated(function ($outboundRecord) {
+            // Update status item berdasarkan tujuan saat update
+            $purpose = $outboundRecord->purpose;
+            foreach ($outboundRecord->outboundItems as $outboundItem) {
+                $newStatus = match($purpose->name) {
+                    'Sewa' => 'masa_sewa',
+                    'Pembelian' => 'terjual',
+                    'Peminjaman' => 'dipinjam',
+                    default => $outboundItem->item->status
+                };
+                $outboundItem->item->update(['status' => $newStatus]);
+            }
+        });
     }
 } 

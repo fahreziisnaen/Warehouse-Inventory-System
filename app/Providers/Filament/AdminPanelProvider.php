@@ -18,6 +18,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use App\Filament\Widgets\StatsOverview;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -46,6 +47,14 @@ class AdminPanelProvider extends PanelProvider
             )
             ->colors([
                 'primary' => Color::Amber,
+                'secondary' => Color::Gray,
+                'success' => Color::Emerald,
+                'warning' => Color::Orange,
+                'danger' => Color::Rose,
+                'info' => Color::Blue,
+                'purple' => Color::Purple,
+                'gray' => Color::Gray,
+                'rose' => Color::Rose,
             ])
             ->navigationGroups([
                 NavigationGroup::make()
@@ -65,7 +74,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
-                \App\Filament\Widgets\StatsOverview::class,
+                StatsOverview::class,
             ])
             ->middleware([
                 EncryptCookies::class,
