@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             PurposeSeeder::class,
             OutboundRecordSeeder::class,
             OutboundItemSeeder::class,
+            InboundWithoutOutboundSeeder::class,
         ]);
     }
 }

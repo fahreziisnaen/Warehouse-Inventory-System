@@ -17,17 +17,8 @@ class InboundItemObserver
         
         $item = Item::find($inboundItem->item_id);
         
-        // Logika penentuan status baru
-        $newStatus = match($item->status) {
-            'dipinjam' => 'diterima',  // Item yang dipinjam kembali menjadi diterima
-            'masa_sewa' => 'diterima',  // Item yang disewa kembali menjadi diterima
-            'sewa_habis' => 'diterima', // Item sewa habis menjadi diterima
-            'baru' => 'diterima',       // Item baru menjadi diterima
-            'bekas' => 'diterima',      // Item bekas menjadi diterima
-            default => $item->status    // Pertahankan status lain
-        };
-
-        $item->update(['status' => $newStatus]);
+        // Update status menjadi 'diterima' saat item di-inbound
+        $item->update(['status' => 'diterima']);
     }
 
     public function deleted(InboundItem $inboundItem): void
