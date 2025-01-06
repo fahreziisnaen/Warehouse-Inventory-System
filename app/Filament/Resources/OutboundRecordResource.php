@@ -104,7 +104,7 @@ class OutboundRecordResource extends Resource
                                     ->label('Serial Number')
                                     ->required()
                                     ->preload()
-                                    ->searchable()
+                                    ->searchable(['serial_number'])
                                     ->live()
                                     ->afterStateUpdated(function ($state, Forms\Set $set, $get) {
                                         if ($state) {
