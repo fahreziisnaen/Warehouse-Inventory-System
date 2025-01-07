@@ -76,14 +76,14 @@ class Item extends Model
     {
         // Ambil transaksi Inbound terbaru
         $latestInbound = $this->inboundItems()
-            ->whereHas('inbound', function ($query) {
+            ->whereHas('inboundRecord', function ($query) {
                 $query->orderBy('receive_date', 'desc');
             })
             ->first();
 
         // Ambil transaksi Outbound terbaru
         $latestOutbound = $this->outboundItems()
-            ->whereHas('outbound', function ($query) {
+            ->whereHas('outboundRecord', function ($query) {
                 $query->orderBy('delivery_date', 'desc');
             })
             ->first();
@@ -103,8 +103,8 @@ class Item extends Model
             return;
         }
 
-        $inboundDate = $latestInbound->inbound->receive_date;
-        $outboundDate = $latestOutbound->outbound->delivery_date;
+        $inboundDate = $latestInbound->inboundRecord->receive_date;
+        $outboundDate = $latestOutbound->outboundRecord->delivery_date;
 
         if ($outboundDate > $inboundDate) {
             // Jika outbound lebih baru, update status sesuai purpose
@@ -117,7 +117,7 @@ class Item extends Model
 
     private function updateStatusFromOutbound($outboundItem)
     {
-        $purpose = $outboundItem->outbound->purpose->name;
+        $purpose = $outboundItem->outboundRecord->purpose->name;
         $newStatus = match($purpose) {
             'Sewa' => 'masa_sewa',
             'Pembelian' => 'terjual',

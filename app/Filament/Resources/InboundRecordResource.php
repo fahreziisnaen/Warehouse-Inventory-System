@@ -22,6 +22,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
 use Filament\Support\Enums\FontWeight;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Forms\Components\DatePicker;
 
 class InboundRecordResource extends Resource
 {
@@ -39,150 +41,159 @@ class InboundRecordResource extends Resource
             ->schema([
                 Forms\Components\Card::make()
                     ->schema([
-                        Forms\Components\TextInput::make('lpb_number')
+                        TextInput::make('lpb_number')
                             ->label('No. LPB')
                             ->required()
-                            ->maxLength(255)
-                            ->unique(ignoreRecord: true)
-                            ->disabled(fn ($context) => $context === 'view'),
-                        Forms\Components\DatePicker::make('receive_date')
+                            ->unique(ignoreRecord: true),
+                        DatePicker::make('receive_date')
                             ->label('Tanggal Terima')
                             ->required()
-                            ->disabled(fn ($context) => $context === 'view'),
-                        Forms\Components\Select::make('po_id')
-                            ->relationship('purchaseOrder', 'po_number')
-                            ->label('Purchase Order')
-                            ->required()
-                            ->preload()
-                            ->searchable(),
-                        Forms\Components\Select::make('project_id')
-                            ->relationship('project', 'project_id')
-                            ->label('Project ID')
-                            ->required()
-                            ->preload()
-                            ->searchable()
-                            ->disabled(fn ($context) => $context === 'view'),
+                            ->default(now()),
                         Select::make('location')
                             ->label('Lokasi')
                             ->options([
                                 'Gudang Jakarta' => 'Gudang Jakarta',
                                 'Gudang Surabaya' => 'Gudang Surabaya',
                             ])
-                            ->required(),
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function (Set $set) {
+                                $set('brand_id', null);
+                                $set('part_number_id', null);
+                            }),
                     ])
                     ->columns(2),
-                Forms\Components\Section::make('Items')
+
+                Forms\Components\Card::make()
+                    ->schema([
+                        Select::make('po_id')
+                            ->relationship('purchaseOrder', 'po_number')
+                            ->label('No. PO')
+                            ->required()
+                            ->searchable()
+                            ->preload(),
+                        Select::make('project_id')
+                            ->relationship('project', 'project_name')
+                            ->label('Project')
+                            ->required()
+                            ->searchable()
+                            ->preload(),
+                    ])
+                    ->columns(2),
+
+                // Section untuk Item dengan Serial Number
+                Forms\Components\Section::make('Items dengan Serial Number')
                     ->schema([
                         Forms\Components\Repeater::make('inboundItems')
                             ->relationship()
                             ->schema([
-                                Forms\Components\Select::make('brand_filter')
+                                Select::make('brand_id')
                                     ->label('Brand')
-                                    ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                                    ->live()
-                                    ->createOptionForm([
-                                        Forms\Components\TextInput::make('brand_name')
-                                            ->label('Nama Brand')
-                                            ->required()
-                                            ->unique('brands', 'brand_name'),
-                                    ])
-                                    ->afterStateUpdated(fn (callable $set) => $set('part_number_filter', null)),
-                                Forms\Components\Select::make('part_number_filter')
+                                    ->options(function () {
+                                        // Hanya ambil brand yang memiliki Item dengan Serial Number
+                                        return \App\Models\Brand::whereHas('partNumbers', function ($query) {
+                                            $query->whereHas('items', function ($q) {
+                                                $q->whereIn('status', ['baru', 'bekas', 'sewa_habis']);
+                                            });
+                                        })->pluck('brand_name', 'brand_id');
+                                    })
+                                    ->required()
+                                    ->reactive()
+                                    ->afterStateUpdated(fn (Set $set) => $set('part_number_id', null)),
+                                
+                                Select::make('part_number_id')
                                     ->label('Part Number')
                                     ->options(function (Get $get) {
-                                        $brandId = $get('brand_filter');
+                                        $brandId = $get('brand_id');
                                         if (!$brandId) return [];
-                                        
-                                        return \App\Models\PartNumber::query()
-                                            ->where('brand_id', $brandId)
+                                        // Hanya ambil Part Number yang memiliki Item dengan Serial Number
+                                        return \App\Models\PartNumber::where('brand_id', $brandId)
+                                            ->whereHas('items', function ($query) {
+                                                $query->whereIn('status', ['baru', 'bekas', 'sewa_habis']);
+                                            })
                                             ->pluck('part_number', 'part_number_id');
                                     })
-                                    ->createOptionForm([
-                                        Forms\Components\Hidden::make('brand_id')
-                                            ->default(fn (Get $get) => $get('../../brand_filter')),
-                                        Forms\Components\TextInput::make('part_number')
-                                            ->label('Part Number')
-                                            ->required()
-                                            ->unique('part_numbers', 'part_number'),
-                                        Forms\Components\Textarea::make('description')
-                                            ->label('Deskripsi'),
-                                    ])
-                                    ->live()
-                                    ->afterStateUpdated(fn (callable $set) => $set('item_id', null)),
-                                Forms\Components\Select::make('item_id')
+                                    ->required()
+                                    ->reactive()
+                                    ->afterStateUpdated(fn (Set $set) => $set('item_id', null)),
+                                
+                                Select::make('item_id')
                                     ->label('Serial Number')
                                     ->options(function (Get $get) {
-                                        $partNumberId = $get('part_number_filter');
+                                        $partNumberId = $get('part_number_id');
                                         if (!$partNumberId) return [];
-
-                                        return \App\Models\Item::query()
-                                            ->where('part_number_id', $partNumberId)
+                                        return \App\Models\Item::where('part_number_id', $partNumberId)
                                             ->whereIn('status', ['baru', 'bekas', 'sewa_habis'])
                                             ->pluck('serial_number', 'item_id');
                                     })
-                                    ->createOptionForm([
-                                        Forms\Components\Hidden::make('part_number_id')
-                                            ->default(fn (Get $get) => $get('../../part_number_filter')),
-                                        Forms\Components\TextInput::make('serial_number')
-                                            ->label('Serial Number')
-                                            ->required()
-                                            ->unique('items', 'serial_number'),
-                                        Forms\Components\Select::make('status')
-                                            ->options([
-                                                'baru' => 'Baru',
-                                                'bekas' => 'Bekas',
-                                            ])
-                                            ->default('baru')
-                                            ->required(),
-                                    ])
                                     ->required()
-                                    ->searchable()
-                                    ->preload()
-                                    ->live(),
+                                    ->searchable(),
+                                
+                                TextInput::make('quantity')
+                                    ->label('Quantity')
+                                    ->default(1)
+                                    ->disabled(),
                             ])
-                            ->columns(3)
-                            ->defaultItems(1),
+                            ->columns(4),
                     ]),
+
+                // Section untuk Batch Items
                 Forms\Components\Section::make('Batch Items')
                     ->schema([
-                        Forms\Components\Select::make('batch_brand_filter')
+                        Select::make('brand_id')
                             ->label('Brand')
-                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                            ->createOptionForm([
-                                Forms\Components\TextInput::make('brand_name')
-                                    ->label('Nama Brand')
-                                    ->required()
-                                    ->unique('brands', 'brand_name'),
-                            ])
-                            ->live()
-                            ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
-                        Forms\Components\Select::make('part_number_id')
+                            ->options(function (Get $get) {
+                                $location = $get('location');
+                                if (!$location) return [];
+
+                                // Filter brand berdasarkan lokasi
+                                return \App\Models\Brand::whereHas('partNumbers', function ($query) use ($location) {
+                                    $query->whereHas('batchItems', function ($batchQuery) use ($location) {
+                                        $batchQuery->whereHas('histories', function ($historyQuery) use ($location) {
+                                            $historyQuery->where('type', 'inbound')
+                                                ->whereHasMorph('recordable', 
+                                                    [\App\Models\InboundRecord::class],
+                                                    function ($recordQuery) use ($location) {
+                                                        $recordQuery->where('location', $location);
+                                                    }
+                                                );
+                                        });
+                                    });
+                                })->pluck('brand_name', 'brand_id');
+                            })
+                            ->reactive()
+                            ->afterStateUpdated(fn (Set $set) => $set('part_number_id', null))
+                            ->searchable(),
+                        
+                        Select::make('part_number_id')
                             ->label('Part Number')
                             ->options(function (Get $get) {
-                                $brandId = $get('batch_brand_filter');
-                                if (!$brandId) return [];
-                                
-                                return \App\Models\PartNumber::query()
-                                    ->where('brand_id', $brandId)
+                                $brandId = $get('brand_id');
+                                $location = $get('location');
+                                if (!$brandId || !$location) return [];
+
+                                // Filter part number berdasarkan brand dan lokasi
+                                return \App\Models\PartNumber::where('brand_id', $brandId)
+                                    ->whereHas('batchItems', function ($batchQuery) use ($location) {
+                                        $batchQuery->whereHas('histories', function ($historyQuery) use ($location) {
+                                            $historyQuery->where('type', 'inbound')
+                                                ->whereHasMorph('recordable', 
+                                                    [\App\Models\InboundRecord::class],
+                                                    function ($recordQuery) use ($location) {
+                                                        $recordQuery->where('location', $location);
+                                                    }
+                                                );
+                                        });
+                                    })
                                     ->pluck('part_number', 'part_number_id');
                             })
-                            ->createOptionForm([
-                                Forms\Components\Hidden::make('brand_id')
-                                    ->default(fn (Get $get) => $get('../batch_brand_filter')),
-                                Forms\Components\TextInput::make('part_number')
-                                    ->label('Part Number')
-                                    ->required()
-                                    ->unique('part_numbers', 'part_number'),
-                                Forms\Components\Textarea::make('description')
-                                    ->label('Deskripsi'),
-                            ])
-                            ->searchable()
-                            ->preload(),
-                        Forms\Components\TextInput::make('batch_quantity')
+                            ->reactive()
+                            ->searchable(),
+                        
+                        TextInput::make('batch_quantity')
                             ->label('Quantity')
                             ->numeric()
-                            ->default(0)
-                            ->minValue(1),
+                            ->visible(fn (Get $get) => $get('part_number_id')),
                     ])
                     ->columns(3),
             ]);

@@ -25,4 +25,9 @@ class PartNumber extends Model
     {
         return $this->hasMany(Item::class, 'part_number_id');
     }
+
+    public function batchItems(): HasMany
+    {
+        return $this->hasMany(BatchItem::class, 'part_number_id');
+    }
 } 
