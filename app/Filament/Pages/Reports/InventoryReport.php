@@ -35,13 +35,9 @@ class InventoryReport extends Page implements HasTable
                         'inboundItems.inboundRecord',
                         'outboundItems.outboundRecord.purpose'
                     ])
-                    ->leftJoin('outbound_items', 'items.item_id', '=', 'outbound_items.item_id')
-                    ->leftJoin('outbound_records', 'outbound_items.outbound_id', '=', 'outbound_records.outbound_id')
-                    ->select('items.*')
-                    ->orderBy('outbound_records.delivery_date', 'desc')
             )
             ->columns([
-                // Inbound Information (Left)
+                // Inbound Information
                 TextColumn::make('inboundItems.inboundRecord.lpb_number')
                     ->label('No. LPB')
                     ->searchable()
@@ -55,7 +51,7 @@ class InventoryReport extends Page implements HasTable
                     ->date()
                     ->sortable(),
 
-                // Outbound Information (Middle-Left)
+                // Outbound Information
                 TextColumn::make('outboundItems.outboundRecord.lkb_number')
                     ->label('No. LKB')
                     ->searchable()
@@ -70,12 +66,12 @@ class InventoryReport extends Page implements HasTable
                     ->sortable(),
                 TextColumn::make('outboundItems.outboundRecord.purpose.name')
                     ->label('Tujuan')
-                    ->searchable(),
-                
-                // Item Status (Middle)
+                    ->badge(),
+
+                // Status dan Lokasi
                 TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (string $state) => ucfirst($state))
+                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->colors([
                         'success' => fn ($state) => $state === 'baru',
                         'warning' => fn ($state) => $state === 'bekas',
@@ -85,21 +81,22 @@ class InventoryReport extends Page implements HasTable
                         'secondary' => fn ($state) => $state === 'dipinjam',
                         'rose' => fn ($state) => $state === 'sewa_habis',
                     ]),
-
-                // Item Details (Right)
-                TextColumn::make('partNumber.brand.brand_name')
-                    ->label('Brand')
-                    ->sortable()
-                    ->searchable(),
-                TextColumn::make('partNumber.part_number')
-                    ->label('Part Number')
-                    ->sortable()
-                    ->searchable(),
-                TextColumn::make('serial_number')
-                    ->label('Serial Number')
-                    ->searchable(),
-            ])
-            ->defaultSort('outboundItems.outboundRecord.delivery_date', 'desc');
+                TextColumn::make('latest_location')
+                    ->label('Lokasi')
+                    ->badge()
+                    ->color(fn ($state) => $state ? match($state) {
+                        'Gudang Jakarta' => 'success',
+                        'Gudang Surabaya' => 'warning',
+                        default => 'gray'
+                    } : 'gray')
+                    ->visible(fn ($record) => $record->status === 'diterima')
+                    ->getStateUsing(function ($record) {
+                        return $record->inboundItems()
+                            ->join('inbound_records', 'inbound_items.inbound_id', '=', 'inbound_records.inbound_id')
+                            ->orderBy('inbound_records.receive_date', 'desc')
+                            ->value('inbound_records.location');
+                    }),
+            ]);
     }
 
     public function getBatchItemsTable(Table $table): Table

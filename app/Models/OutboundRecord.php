@@ -21,7 +21,7 @@ class OutboundRecord extends Model
     ];
 
     protected $casts = [
-        'delivery_date' => 'datetime',
+        'delivery_date' => 'date',
     ];
 
     public function vendor(): BelongsTo
@@ -36,7 +36,7 @@ class OutboundRecord extends Model
 
     public function outboundItems(): HasMany
     {
-        return $this->hasMany(OutboundItem::class, 'outbound_id', 'outbound_id');
+        return $this->hasMany(OutboundItem::class, 'outbound_id');
     }
 
     public function purpose(): BelongsTo

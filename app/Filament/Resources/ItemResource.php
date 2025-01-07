@@ -20,6 +20,8 @@ use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Support\Enums\FontWeight;
 
 class ItemResource extends Resource
 {
@@ -77,16 +79,37 @@ class ItemResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->query(
+                Item::query()
+                    ->with([
+                        'partNumber.brand',
+                        'inboundItems.inboundRecord',
+                        'outboundItems.outboundRecord.purpose'
+                    ])
+            )
             ->columns([
+                Tables\Columns\TextColumn::make('partNumber.brand.brand_name')
+                    ->label('Brand')
+                    ->sortable()
+                    ->searchable(),
                 Tables\Columns\TextColumn::make('partNumber.part_number')
                     ->label('Part Number')
                     ->sortable()
                     ->searchable(),
                 Tables\Columns\TextColumn::make('serial_number')
+                    ->label('Serial Number')
                     ->searchable(),
+                Tables\Columns\TextColumn::make('inboundItems.inboundRecord.location')
+                    ->label('Lokasi')
+                    ->badge()
+                    ->color(fn ($state) => match($state) {
+                        'Gudang Jakarta' => 'success',
+                        'Gudang Surabaya' => 'warning',
+                        default => 'gray'
+                    }),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
-                    ->formatStateUsing(fn (string $state) => ucfirst($state))
+                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->colors([
                         'success' => fn ($state) => $state === 'baru',
                         'warning' => fn ($state) => $state === 'bekas',
@@ -137,7 +160,10 @@ class ItemResource extends Resource
                         }),
                 ]),
             ])
-            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]));
+            ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]))
+            ->modifyQueryUsing(fn (Builder $query) => $query
+                ->with(['inboundItems.inboundRecord', 'outboundItems.outboundRecord.purpose'])
+            );
     }
 
     public static function getRelations(): array
@@ -168,16 +194,15 @@ class ItemResource extends Resource
             ->schema([
                 Section::make('Informasi Item')
                     ->schema([
-                        TextEntry::make('serial_number')
-                            ->label('Serial Number'),
-                        TextEntry::make('partNumber.part_number')
-                            ->label('Part Number'),
                         TextEntry::make('partNumber.brand.brand_name')
                             ->label('Brand'),
+                        TextEntry::make('partNumber.part_number')
+                            ->label('Part Number'),
+                        TextEntry::make('serial_number')
+                            ->label('Serial Number'),
                         TextEntry::make('status')
-                            ->label('Status')
                             ->badge()
-                            ->formatStateUsing(fn (string $state) => ucfirst($state))
+                            ->formatStateUsing(fn (string $state): string => ucfirst($state))
                             ->color(fn (string $state): string => match ($state) {
                                 'baru' => 'success',
                                 'bekas' => 'warning',
@@ -186,47 +211,71 @@ class ItemResource extends Resource
                                 'masa_sewa' => 'purple',
                                 'dipinjam' => 'secondary',
                                 'sewa_habis' => 'rose',
+                                default => 'gray',
                             }),
-                        TextEntry::make('partNumber.description')
-                            ->label('Deskripsi')
-                            ->columnSpanFull(),
+                        TextEntry::make('latest_location')
+                            ->label('Lokasi')
+                            ->visible(fn ($record) => $record && $record->status === 'diterima')
+                            ->badge()
+                            ->getStateUsing(function ($record) {
+                                if (!$record) return null;
+                                
+                                return $record->inboundItems()
+                                    ->join('inbound_records', 'inbound_items.inbound_id', '=', 'inbound_records.inbound_id')
+                                    ->orderBy('inbound_records.receive_date', 'desc')
+                                    ->value('inbound_records.location');
+                            })
+                            ->color(fn ($state) => match($state) {
+                                'Gudang Jakarta' => 'success',
+                                'Gudang Surabaya' => 'warning',
+                                default => 'gray'
+                            }),
                     ])
                     ->columns(2),
 
-                Section::make('Barang Masuk')
+                Section::make('Riwayat Inbound')
                     ->schema([
                         RepeatableEntry::make('inboundItems')
                             ->schema([
                                 TextEntry::make('inboundRecord.lpb_number')
-                                    ->label('Nomor LPB'),
+                                    ->label('No. LPB')
+                                    ->url(fn ($record) => url("/admin/inbound-records/{$record->inbound_id}"))
+                                    ->openUrlInNewTab()
+                                    ->weight(FontWeight::Bold)
+                                    ->color('primary'),
                                 TextEntry::make('inboundRecord.receive_date')
                                     ->label('Tanggal Terima')
                                     ->date(),
-                                TextEntry::make('inboundRecord.purchaseOrder.po_number')
-                                    ->label('Nomor PO'),
-                                TextEntry::make('inboundRecord.project.project_name')
-                                    ->label('Project'),
+                                TextEntry::make('inboundRecord.location')
+                                    ->label('Lokasi')
+                                    ->badge()
+                                    ->color(fn ($state) => match($state) {
+                                        'Gudang Jakarta' => 'success',
+                                        'Gudang Surabaya' => 'warning',
+                                        default => 'gray'
+                                    }),
                             ])
-                            ->columns(4)
+                            ->columns(3),
                     ]),
 
-                Section::make('Barang Keluar')
+                Section::make('Riwayat Outbound')
                     ->schema([
                         RepeatableEntry::make('outboundItems')
                             ->schema([
                                 TextEntry::make('outboundRecord.lkb_number')
-                                    ->label('Nomor LKB'),
+                                    ->label('No. LKB')
+                                    ->url(fn ($record) => url("/admin/outbound-records/{$record->outbound_id}"))
+                                    ->openUrlInNewTab()
+                                    ->weight(FontWeight::Bold)
+                                    ->color('primary'),
                                 TextEntry::make('outboundRecord.delivery_date')
                                     ->label('Tanggal Keluar')
                                     ->date(),
-                                TextEntry::make('outboundRecord.vendor.vendor_name')
-                                    ->label('Customer'),
-                                TextEntry::make('outboundRecord.project.project_name')
-                                    ->label('Project'),
                                 TextEntry::make('outboundRecord.purpose.name')
-                                    ->label('Tujuan'),
+                                    ->label('Tujuan')
+                                    ->badge(),
                             ])
-                            ->columns(5)
+                            ->columns(3),
                     ]),
             ]);
     }

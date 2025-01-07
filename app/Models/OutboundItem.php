@@ -15,13 +15,13 @@ class OutboundItem extends Model
         'quantity'
     ];
 
-    public function outbound(): BelongsTo
-    {
-        return $this->belongsTo(OutboundRecord::class, 'outbound_id');
-    }
-
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class, 'item_id');
+    }
+
+    public function outboundRecord(): BelongsTo
+    {
+        return $this->belongsTo(OutboundRecord::class, 'outbound_id', 'outbound_id');
     }
 } 

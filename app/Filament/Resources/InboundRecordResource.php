@@ -18,6 +18,9 @@ use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Support\Enums\FontWeight;
 
 class InboundRecordResource extends Resource
 {
@@ -58,6 +61,13 @@ class InboundRecordResource extends Resource
                             ->preload()
                             ->searchable()
                             ->disabled(fn ($context) => $context === 'view'),
+                        Select::make('location')
+                            ->label('Lokasi')
+                            ->options([
+                                'Gudang Jakarta' => 'Gudang Jakarta',
+                                'Gudang Surabaya' => 'Gudang Surabaya',
+                            ])
+                            ->required(),
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Items')
@@ -143,11 +153,12 @@ class InboundRecordResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('lpb_number')
-                    ->label('Nomor LPB')
+                    ->label('No. LPB')
                     ->searchable()
-                    ->sortable(),
+                    ->weight(FontWeight::Bold)
+                    ->color('primary'),
                 Tables\Columns\TextColumn::make('receive_date')
-                    ->label('Tanggal Penerimaan Barang')
+                    ->label('Tanggal Terima')
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('purchaseOrder.po_number')
@@ -164,6 +175,14 @@ class InboundRecordResource extends Resource
                     ->limitList(3)
                     ->expandableLimitedList()
                     ->searchable(),
+                Tables\Columns\TextColumn::make('location')
+                    ->label('Lokasi')
+                    ->badge()
+                    ->color(fn ($state) => match($state) {
+                        'Gudang Jakarta' => 'success',
+                        'Gudang Surabaya' => 'warning',
+                        default => 'gray'
+                    }),
             ])
             ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]))
             ->filters([
@@ -185,6 +204,13 @@ class InboundRecordResource extends Resource
                                 fn (Builder $query, $date): Builder => $query->whereDate('receive_date', '<=', $date),
                             );
                     }),
+                SelectFilter::make('location')
+                    ->label('Lokasi')
+                    ->options([
+                        'Gudang Jakarta' => 'Gudang Jakarta',
+                        'Gudang Surabaya' => 'Gudang Surabaya',
+                    ])
+                    ->searchable(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -219,17 +245,23 @@ class InboundRecordResource extends Resource
     {
         return $infolist
             ->schema([
-                Section::make('Informasi Barang Masuk')
+                Section::make('Informasi Inbound')
                     ->schema([
                         TextEntry::make('lpb_number')
-                            ->label('Nomor LPB'),
+                            ->label('No. LPB')
+                            ->weight(FontWeight::Bold)
+                            ->color('primary'),
                         TextEntry::make('receive_date')
-                            ->label('Tanggal Penerimaan Barang')
+                            ->label('Tanggal Terima')
                             ->date(),
-                        TextEntry::make('purchaseOrder.po_number')
-                            ->label('Purchase Order'),
-                        TextEntry::make('project.project_id')
-                            ->label('Project ID'),
+                        TextEntry::make('location')
+                            ->label('Lokasi')
+                            ->badge()
+                            ->color(fn ($state) => match($state) {
+                                'Gudang Jakarta' => 'success',
+                                'Gudang Surabaya' => 'warning',
+                                default => 'gray'
+                            }),
                     ])
                     ->columns(2),
                 Section::make('Items')

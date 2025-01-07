@@ -16,11 +16,12 @@ class InboundRecord extends Model
         'po_id',
         'project_id',
         'part_number_id',
-        'batch_quantity'
+        'batch_quantity',
+        'location'
     ];
 
     protected $casts = [
-        'receive_date' => 'datetime',
+        'receive_date' => 'date',
     ];
 
     protected static ?string $label = 'Barang Masuk';

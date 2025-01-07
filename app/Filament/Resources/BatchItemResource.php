@@ -15,6 +15,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Support\Enums\FontWeight;
+use App\Models\InboundRecord;
 
 class BatchItemResource extends Resource
 {
@@ -70,6 +71,25 @@ class BatchItemResource extends Resource
                 Tables\Columns\TextColumn::make('format.name')
                     ->label('Satuan')
                     ->sortable(),
+                Tables\Columns\TextColumn::make('histories')
+                    ->label('Lokasi')
+                    ->badge()
+                    ->color(fn ($state) => match($state) {
+                        'Gudang Jakarta' => 'success',
+                        'Gudang Surabaya' => 'warning',
+                        default => 'gray'
+                    })
+                    ->getStateUsing(function ($record) {
+                        $latestInbound = $record->histories()
+                            ->where('type', 'inbound')
+                            ->with('recordable')
+                            ->whereHasMorph('recordable', [InboundRecord::class], function ($query) {
+                                $query->orderBy('receive_date', 'desc');
+                            })
+                            ->first();
+                        
+                        return $latestInbound?->recordable?->location;
+                    }),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('brand')
@@ -111,6 +131,25 @@ class BatchItemResource extends Resource
                             ->label('Current Stock'),
                         TextEntry::make('format.name')
                             ->label('Satuan'),
+                        TextEntry::make('histories')
+                            ->label('Lokasi')
+                            ->getStateUsing(function ($record) {
+                                $latestInbound = $record->histories()
+                                    ->where('type', 'inbound')
+                                    ->with('recordable')
+                                    ->whereHasMorph('recordable', [InboundRecord::class], function ($query) {
+                                        $query->orderBy('receive_date', 'desc');
+                                    })
+                                    ->first();
+                                
+                                return $latestInbound?->recordable?->location;
+                            })
+                            ->badge()
+                            ->color(fn ($state) => match($state) {
+                                'Gudang Jakarta' => 'success',
+                                'Gudang Surabaya' => 'warning',
+                                default => 'gray'
+                            }),
                     ])
                     ->columns(2),
 
