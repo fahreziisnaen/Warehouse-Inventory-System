@@ -60,15 +60,6 @@ class ProjectResource extends Resource
                             ->required()
                             ->preload()
                             ->searchable(),
-                        Forms\Components\Textarea::make('description')
-                            ->maxLength(65535)
-                            ->columnSpanFull(),
-                        Forms\Components\Select::make('status_id')
-                            ->relationship('status', 'name')
-                            ->label('Status Project')
-                            ->required()
-                            ->preload()
-                            ->searchable(),
                     ])
                     ->columns(2),
             ]);
@@ -90,12 +81,6 @@ class ProjectResource extends Resource
                     ->label('Customer')
                     ->sortable()
                     ->searchable(),
-                BadgeColumn::make('status.name')
-                    ->label('Status')
-                    ->colors([
-                        'success' => 'Aktif',
-                        'danger' => 'Tidak Aktif',
-                    ]),
             ])
             ->filters([
                 //
@@ -142,11 +127,6 @@ class ProjectResource extends Resource
                             ->label('Nama Project'),
                         TextEntry::make('vendor.vendor_name')
                             ->label('Customer'),
-                        TextEntry::make('status.name')
-                            ->label('Status'),
-                        TextEntry::make('description')
-                            ->label('Deskripsi')
-                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 

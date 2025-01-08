@@ -15,14 +15,7 @@ class Project extends Model
     protected $fillable = [
         'project_id',
         'project_name',
-        'vendor_id',
-        'status_id',
-        'description'
-    ];
-
-    protected $casts = [
-        'start_date' => 'date',
-        'end_date' => 'date'
+        'vendor_id'
     ];
 
     public function vendor(): BelongsTo
@@ -43,10 +36,5 @@ class Project extends Model
     public function outboundRecords(): HasMany
     {
         return $this->hasMany(OutboundRecord::class, 'project_id');
-    }
-
-    public function status(): BelongsTo
-    {
-        return $this->belongsTo(ProjectStatus::class, 'status_id', 'status_id');
     }
 } 
