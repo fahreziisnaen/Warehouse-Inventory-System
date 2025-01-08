@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id('inbound_item_id');
             $table->foreignId('inbound_id')->constrained('inbound_records', 'inbound_id');
             $table->foreignId('item_id')->nullable()->constrained('items', 'item_id');
-            $table->integer('quantity');
+            $table->integer('quantity')->default(1);
             $table->timestamps();
         });
     }

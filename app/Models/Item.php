@@ -27,7 +27,6 @@ class Item extends Model
     const STATUS_TERJUAL = 'terjual';
     const STATUS_MASA_SEWA = 'masa_sewa';
     const STATUS_DIPINJAM = 'dipinjam';
-    const STATUS_SEWA_HABIS = 'sewa_habis';
 
     public static function getInitialStatuses(): array
     {
@@ -43,7 +42,6 @@ class Item extends Model
             self::STATUS_TERJUAL => 'Terjual',
             self::STATUS_MASA_SEWA => 'Masa Sewa',
             self::STATUS_DIPINJAM => 'Dipinjam',
-            self::STATUS_SEWA_HABIS => 'Sewa Habis',
         ];
     }
 

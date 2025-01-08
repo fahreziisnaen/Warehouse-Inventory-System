@@ -15,13 +15,29 @@ class InboundItem extends Model
         'quantity'
     ];
 
-    public function item(): BelongsTo
-    {
-        return $this->belongsTo(Item::class, 'item_id');
-    }
-
     public function inboundRecord(): BelongsTo
     {
-        return $this->belongsTo(InboundRecord::class, 'inbound_id', 'inbound_id');
+        return $this->belongsTo(InboundRecord::class, 'inbound_id');
+    }
+
+    public function item(): BelongsTo
+    {
+        return $this->belongsTo(Item::class, 'item_id')
+            ->whereNotNull('serial_number')
+            ->whereNotNull('part_number_id')
+            ->whereHas('partNumber', function ($query) {
+                $query->whereHas('brand');
+            });
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::creating(function ($model) {
+            if (empty($model->item_id)) {
+                return false; // Prevent creation if item_id is empty
+            }
+        });
     }
 } 

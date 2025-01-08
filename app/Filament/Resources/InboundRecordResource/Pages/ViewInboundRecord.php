@@ -48,9 +48,9 @@ class ViewInboundRecord extends ViewRecord
                     ])
                     ->columns(2),
 
-                Section::make('Items')
+                Section::make('Items dengan Serial Number')
                     ->schema([
-                        RepeatableEntry::make('inboundItems')
+                        RepeatableEntry::make('validInboundItems')
                             ->schema([
                                 TextEntry::make('item.partNumber.brand.brand_name')
                                     ->label('Brand'),
@@ -67,30 +67,21 @@ class ViewInboundRecord extends ViewRecord
                             ])
                             ->columns(5)
                     ])
-                    ->hidden(fn($record) => !$record->inboundItems()
-                        ->whereHas('item', fn($query) => 
-                            $query->where('serial_number', 'not like', 'BATCH-%')
-                        )->exists()
-                    ),
+                    ->hidden(fn ($record) => !$record->validInboundItems()->exists()),
 
                 Section::make('Batch Items')
                     ->schema([
-                        RepeatableEntry::make('inboundItems')
-                            ->schema([
-                                TextEntry::make('item.partNumber.brand.brand_name')
-                                    ->label('Brand'),
-                                TextEntry::make('item.partNumber.part_number')
-                                    ->label('Part Number'),
-                                TextEntry::make('quantity')
-                                    ->label('Quantity'),
-                            ])
-                            ->columns(3)
+                        TextEntry::make('partNumber.brand.brand_name')
+                            ->label('Brand'),
+                        TextEntry::make('partNumber.part_number')
+                            ->label('Part Number'),
+                        TextEntry::make('batch_quantity')
+                            ->label('Quantity'),
+                        TextEntry::make('unitFormat.name')
+                            ->label('Satuan'),
                     ])
-                    ->hidden(fn($record) => !$record->inboundItems()
-                        ->whereHas('item', fn($query) => 
-                            $query->where('serial_number', 'like', 'BATCH-%')
-                        )->exists()
-                    ),
+                    ->columns(4)
+                    ->visible(fn ($record) => !empty($record->part_number_id)),
             ]);
     }
 

@@ -22,6 +22,7 @@ use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Support\Enums\FontWeight;
+use Filament\Tables\Filters\SelectFilter;
 
 class ItemResource extends Resource
 {
@@ -117,26 +118,21 @@ class ItemResource extends Resource
                     ->badge()
                     ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->colors([
-                        'success' => fn ($state) => $state === 'baru',
-                        'warning' => fn ($state) => $state === 'bekas',
                         'info' => fn ($state) => $state === 'diterima',
                         'danger' => fn ($state) => $state === 'terjual',
                         'purple' => fn ($state) => $state === 'masa_sewa',
                         'secondary' => fn ($state) => $state === 'dipinjam',
-                        'rose' => fn ($state) => $state === 'sewa_habis',
                     ]),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->options([
-                        'baru' => 'Baru',
-                        'bekas' => 'Bekas',
                         'diterima' => 'Diterima',
                         'terjual' => 'Terjual',
                         'masa_sewa' => 'Masa Sewa',
                         'dipinjam' => 'Dipinjam',
-                        'sewa_habis' => 'Sewa Habis',
-                    ]),
+                    ])
+                    ->label('Status'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -192,13 +188,10 @@ class ItemResource extends Resource
                             ->badge()
                             ->formatStateUsing(fn (string $state): string => ucfirst($state))
                             ->color(fn (string $state): string => match ($state) {
-                                'baru' => 'success',
-                                'bekas' => 'warning',
                                 'diterima' => 'info',
                                 'terjual' => 'danger',
                                 'masa_sewa' => 'purple',
                                 'dipinjam' => 'secondary',
-                                'sewa_habis' => 'rose',
                                 default => 'gray',
                             }),
                         TextEntry::make('latest_location')

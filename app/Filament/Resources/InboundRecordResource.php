@@ -30,8 +30,15 @@ use Illuminate\Support\HtmlString;
 use App\Models\Item;
 use Filament\Forms\Components\Radio;
 use Filament\Notifications\Notification;
-use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Action;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\BatchItem;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Infolists\Components\Grid;
+use Filament\Infolists\Components\Group;
+use Filament\Forms\Components\Actions\Action as DeleteAction;
+use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Action as FormAction;
 
 class InboundRecordResource extends Resource
 {
@@ -63,12 +70,7 @@ class InboundRecordResource extends Resource
                                 'Gudang Jakarta' => 'Gudang Jakarta',
                                 'Gudang Surabaya' => 'Gudang Surabaya',
                             ])
-                            ->required()
-                            ->reactive()
-                            ->afterStateUpdated(function (Set $set) {
-                                $set('brand_id', null);
-                                $set('part_number_id', null);
-                            }),
+                            ->required(),
                     ])
                     ->columns(2),
 
@@ -77,12 +79,11 @@ class InboundRecordResource extends Resource
                         Select::make('po_id')
                             ->relationship('purchaseOrder', 'po_number')
                             ->label('No. PO')
-                            ->required()
                             ->searchable()
                             ->preload(),
                         Select::make('project_id')
-                            ->relationship('project', 'project_name')
-                            ->label('Project')
+                            ->relationship('project', 'project_id')
+                            ->label('Project ID')
                             ->required()
                             ->searchable()
                             ->preload(),
@@ -93,14 +94,14 @@ class InboundRecordResource extends Resource
                 Forms\Components\Section::make('Items dengan Serial Number')
                     ->schema([
                         Forms\Components\Repeater::make('inboundItems')
-                            ->relationship()
                             ->schema([
                                 Select::make('brand_id')
                                     ->label('Brand')
                                     ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->reactive()
                                     ->createOptionForm([
                                         TextInput::make('brand_name')
-                                            ->required()
+                                    ->required()
                                             ->unique('brands', 'brand_name')
                                     ])
                                     ->createOptionUsing(function (array $data) {
@@ -108,29 +109,25 @@ class InboundRecordResource extends Resource
                                             'brand_name' => $data['brand_name']
                                         ])->brand_id;
                                     })
-                                    ->required()
-                                    ->reactive()
-                                    ->afterStateUpdated(function (Set $set) {
-                                        $set('part_number_id', null);
-                                        $set('multiple_item_ids', null);
-                                        $set('bulk_serial_numbers', null);
-                                    }),
-                                
+                                    ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
+
                                 Select::make('part_number_id')
                                     ->label('Part Number')
-                                    ->options(function (Get $get) {
+                                    ->options(function (callable $get) {
                                         $brandId = $get('brand_id');
                                         if (!$brandId) return [];
                                         return \App\Models\PartNumber::where('brand_id', $brandId)
                                             ->pluck('part_number', 'part_number_id');
                                     })
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->reactive()
                                     ->createOptionForm([
                                         Select::make('brand_id')
                                             ->label('Brand')
                                             ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
                                             ->required(),
                                         TextInput::make('part_number')
-                                            ->required()
+                                    ->required()
                                             ->unique('part_numbers', 'part_number'),
                                         Textarea::make('description')
                                             ->columnSpanFull(),
@@ -141,56 +138,27 @@ class InboundRecordResource extends Resource
                                             'part_number' => $data['part_number'],
                                             'description' => $data['description'] ?? null,
                                         ])->part_number_id;
-                                    })
-                                    ->required()
-                                    ->reactive()
-                                    ->afterStateUpdated(function (Set $set) {
-                                        $set('multiple_item_ids', null);
-                                        $set('bulk_serial_numbers', null);
                                     }),
-                                
-                                Radio::make('input_type')
-                                    ->label('Tipe Input')
-                                    ->options([
-                                        'existing_multiple' => 'Pilih Serial Number yang ada',
-                                        'bulk' => 'Input Multiple Serial Number Baru',
-                                    ])
-                                    ->default('existing_multiple')
-                                    ->reactive(),
 
-                                // Hanya untuk multiple select
-                                Select::make('multiple_item_ids')
-                                    ->label('Serial Numbers')
-                                    ->multiple()
-                                    ->searchable()
-                                    ->preload()
-                                    ->options(function (Get $get) {
-                                        $partNumberId = $get('part_number_id');
-                                        if (!$partNumberId) return [];
-                                        return \App\Models\Item::where('part_number_id', $partNumberId)
-                                            ->where('status', '!=', 'terjual')
-                                            ->pluck('serial_number', 'item_id');
-                                    })
-                                    ->visible(fn (Get $get) => $get('input_type') === 'existing_multiple')
-                                    ->required(fn (Get $get) => $get('input_type') === 'existing_multiple'),
-
-                                // Untuk input bulk serial numbers baru
                                 Textarea::make('bulk_serial_numbers')
                                     ->label('Serial Numbers')
-                                    ->helperText('Masukkan Serial Number (satu per baris)')
-                                    ->visible(fn (Get $get) => $get('input_type') === 'bulk')
-                                    ->rules(['required_if:input_type,bulk']),
-
-                                Hidden::make('quantity')
-                                    ->default(1),
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->helperText('Satu serial number per baris'),
                             ])
-                            ->columns(3),
+                            ->columns(3)
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah Item')
+                            ->reorderableWithButtons()
+                            ->collapsible()
+                            ->minItems(0)
+                            ->live()
+                            ->hiddenOn('edit'),
                     ]),
 
                 // Section untuk Batch Items
                 Forms\Components\Section::make('Batch Items')
                     ->schema([
-                        Select::make('brand_id')
+                        Select::make('brand_id_batch')
                             ->label('Brand')
                             ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
                             ->createOptionForm([
@@ -203,13 +171,18 @@ class InboundRecordResource extends Resource
                                     'brand_name' => $data['brand_name']
                                 ])->brand_id;
                             })
+                            ->nullable()
                             ->reactive()
-                            ->afterStateUpdated(fn (Set $set) => $set('part_number_id', null)),
-                        
+                            ->afterStateUpdated(function (Set $set) {
+                                $set('part_number_id', null);
+                                $set('batch_quantity', null);
+                                $set('format_id', null);
+                            }),
+
                         Select::make('part_number_id')
                             ->label('Part Number')
                             ->options(function (Get $get) {
-                                $brandId = $get('brand_id');
+                                $brandId = $get('brand_id_batch');
                                 if (!$brandId) return [];
                                 return \App\Models\PartNumber::where('brand_id', $brandId)
                                     ->pluck('part_number', 'part_number_id');
@@ -232,32 +205,43 @@ class InboundRecordResource extends Resource
                                     'description' => $data['description'] ?? null,
                                 ])->part_number_id;
                             })
-                            ->reactive(),
-                        
+                            ->required(fn (Get $get): bool => !empty($get('brand_id_batch')))
+                            ->disabled(fn (Get $get): bool => empty($get('brand_id_batch')))
+                            ->reactive()
+                            ->afterStateUpdated(function (Set $set) {
+                                $set('batch_quantity', null);
+                                $set('format_id', null);
+                            }),
+
+                        TextInput::make('batch_quantity')
+                            ->label('Quantity')
+                            ->numeric()
+                            ->minValue(1)
+                            ->required(fn (Get $get): bool => !empty($get('part_number_id')))
+                            ->disabled(fn (Get $get): bool => empty($get('part_number_id'))),
+
                         Select::make('format_id')
                             ->label('Satuan')
-                            ->options(fn () => \App\Models\UnitFormat::pluck('name', 'format_id'))
+                            ->relationship('unitFormat', 'name')
+                            ->required(fn (Get $get): bool => !empty($get('part_number_id')))
+                            ->disabled(fn (Get $get): bool => empty($get('part_number_id')))
                             ->createOptionForm([
                                 TextInput::make('name')
                                     ->label('Nama Satuan')
                                     ->required()
                                     ->unique('unit_formats', 'name')
+                                    ->helperText('Contoh: Unit, Pack, Roll, Box, Meter')
                             ])
                             ->createOptionUsing(function (array $data) {
                                 return \App\Models\UnitFormat::create([
                                     'name' => $data['name']
                                 ])->format_id;
                             })
-                            ->required()
-                            ->visible(fn (Get $get) => $get('part_number_id')),
-                        
-                        TextInput::make('batch_quantity')
-                            ->label('Quantity')
-                            ->numeric()
-                            ->required()
-                            ->visible(fn (Get $get) => $get('part_number_id')),
+                            ->preload()
+                            ->searchable(),
                     ])
-                    ->columns(4),
+                    ->columns(4)
+                    ->visible(fn ($record) => !$record || $record->part_number_id !== null),
             ]);
     }
 
@@ -268,34 +252,25 @@ class InboundRecordResource extends Resource
                 Tables\Columns\TextColumn::make('lpb_number')
                     ->label('No. LPB')
                     ->searchable()
-                    ->weight(FontWeight::Bold)
-                    ->color('primary'),
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('receive_date')
                     ->label('Tanggal Terima')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('purchaseOrder.po_number')
-                    ->label('Purchase Order')
-                    ->searchable()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('project.project_id')
-                    ->label('Project ID')
-                    ->sortable()
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('inboundItems.item.serial_number')
-                    ->label('Serial Numbers')
-                    ->listWithLineBreaks()
-                    ->limitList(3)
-                    ->expandableLimitedList()
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('location')
                     ->label('Lokasi')
-                    ->badge()
-                    ->color(fn ($state) => match($state) {
-                        'Gudang Jakarta' => 'success',
-                        'Gudang Surabaya' => 'warning',
-                        default => 'gray'
-                    }),
+                    ->badge(),
+                Tables\Columns\TextColumn::make('project.project_id')
+                    ->label('Project ID')
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('project.project_name')
+                    ->label('Nama Project')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('purchaseOrder.po_number')
+                    ->label('PO Number')
+                    ->searchable()
+                    ->sortable(),
             ])
             ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]))
             ->filters([
@@ -361,49 +336,51 @@ class InboundRecordResource extends Resource
                 Section::make('Informasi Inbound')
                     ->schema([
                         TextEntry::make('lpb_number')
-                            ->label('No. LPB')
-                            ->weight(FontWeight::Bold)
-                            ->color('primary'),
+                            ->label('No. LPB'),
                         TextEntry::make('receive_date')
                             ->label('Tanggal Terima')
                             ->date(),
                         TextEntry::make('location')
-                            ->label('Lokasi')
-                            ->badge()
-                            ->color(fn ($state) => match($state) {
-                                'Gudang Jakarta' => 'success',
-                                'Gudang Surabaya' => 'warning',
-                                default => 'gray'
-                            }),
+                            ->label('Lokasi'),
+                        TextEntry::make('project.project_name')
+                            ->label('Project'),
+                        TextEntry::make('purchaseOrder.po_number')
+                            ->label('No. PO'),
                     ])
                     ->columns(2),
+
                 Section::make('Items')
                     ->schema([
                         RepeatableEntry::make('inboundItems')
                             ->schema([
+                                TextEntry::make('item.partNumber.brand.brand_name')
+                                    ->label('Brand'),
+                                TextEntry::make('item.partNumber.part_number')
+                                    ->label('Part Number'),
                                 TextEntry::make('item.serial_number')
                                     ->label('Serial Number'),
-                                TextEntry::make('item.status')
-                                    ->label('Status')
-                                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
                                 TextEntry::make('quantity')
                                     ->label('Quantity'),
+                                TextEntry::make('item.status')
+                                    ->label('Status')
                             ])
-                            ->columns(3)
+                            ->columns(5),
                     ]),
+
+                // Tambahkan section untuk Batch Items
                 Section::make('Batch Items')
                     ->schema([
-                        TextEntry::make('part_number_id')
-                            ->label('Part Number')
-                            ->formatStateUsing(fn ($record) => $record->partNumber?->part_number ?? '-'),
-                        TextEntry::make('format_id')
-                            ->label('Satuan')
-                            ->formatStateUsing(fn ($record) => $record->unitFormat?->name ?? '-'),
+                        TextEntry::make('partNumber.brand.brand_name')
+                            ->label('Brand'),
+                        TextEntry::make('partNumber.part_number')
+                            ->label('Part Number'),
                         TextEntry::make('batch_quantity')
                             ->label('Quantity'),
+                        TextEntry::make('unitFormat.name')
+                            ->label('Satuan'),
                     ])
-                    ->visible(fn ($record) => $record->part_number_id !== null)
-                    ->columns(3),
+                    ->columns(4)
+                    ->visible(fn ($record) => !empty($record->part_number_id)),
             ]);
     }
 
@@ -413,59 +390,64 @@ class InboundRecordResource extends Resource
             $newInboundItems = [];
             
             foreach ($data['inboundItems'] as $key => $itemData) {
-                if ($itemData['input_type'] === 'existing_multiple') {
-                    // Hapus item original dari array
-                    unset($data['inboundItems'][$key]);
-                    
-                    // Buat inbound items baru untuk setiap item yang dipilih
-                    foreach ($itemData['multiple_item_ids'] as $itemId) {
+                // Skip jika data tidak lengkap
+                if (empty($itemData['brand_id']) || 
+                    empty($itemData['part_number_id']) || 
+                    empty($itemData['bulk_serial_numbers'])) {
+                    continue;  // Skip iterasi ini dan lanjut ke data berikutnya
+                }
+
+                // Proses serial numbers
+                $serialNumbers = array_filter(
+                    explode("\n", str_replace("\r", "", $itemData['bulk_serial_numbers']))
+                );
+                $serialNumbers = array_map('trim', $serialNumbers);
+                
+                // Skip jika tidak ada serial number valid
+                if (empty($serialNumbers)) {
+                    continue;
+                }
+
+                foreach ($serialNumbers as $serialNumber) {
+                    if (empty($serialNumber)) continue;
+
+                    // Cek apakah serial number sudah ada
+                    $existingItem = Item::where('serial_number', $serialNumber)->first();
+
+                    if ($existingItem) {
+                        // Jika sudah ada, update status dan gunakan item yang ada
+                        $existingItem->update(['status' => 'diterima']);
                         $newInboundItems[] = [
-                            'part_number_id' => $itemData['part_number_id'],
-                            'item_id' => $itemId,
+                            'item_id' => $existingItem->item_id,
                             'quantity' => 1
                         ];
-                    }
-                }
-                elseif ($itemData['input_type'] === 'bulk') {
-                    unset($data['inboundItems'][$key]);
-                    
-                    $serialNumbers = array_filter(
-                        explode("\n", str_replace("\r", "", $itemData['bulk_serial_numbers']))
-                    );
-                    $serialNumbers = array_map('trim', $serialNumbers);
-                    
-                    // Cek duplikasi dan existing sebelum create
-                    $existingSerials = Item::whereIn('serial_number', $serialNumbers)->pluck('serial_number')->toArray();
-                    if (!empty($existingSerials)) {
-                        Notification::make()
-                            ->title('Error')
-                            ->body("Beberapa Serial Number sudah ada di database: " . implode(', ', $existingSerials))
-                            ->danger()
-                            ->send();
-                        continue;
-                    }
-
-                    foreach ($serialNumbers as $serialNumber) {
-                        if (empty($serialNumber)) continue;
-                        
-                        $item = Item::create([
+                    } else {
+                        // Jika belum ada, buat item baru
+                        $newItem = Item::create([
                             'part_number_id' => $itemData['part_number_id'],
                             'serial_number' => $serialNumber,
                             'status' => 'diterima'
                         ]);
                         
-                        $newInboundItems[] = [
-                            'part_number_id' => $itemData['part_number_id'],
-                            'item_id' => $item->item_id,
-                            'quantity' => 1
-                        ];
+                        if ($newItem && $newItem->item_id) {
+                            $newInboundItems[] = [
+                                'item_id' => $newItem->item_id,
+                                'quantity' => 1
+                            ];
+                        }
                     }
                 }
             }
             
-            $data['inboundItems'] = array_merge($data['inboundItems'], $newInboundItems);
+            // Hanya set data jika ada item valid
+            if (!empty($newInboundItems)) {
+                $data['inboundItems'] = $newInboundItems;
+            } else {
+                // Hapus inboundItems jika tidak ada data valid
+                unset($data['inboundItems']);
+            }
         }
-        
+
         return $data;
     }
 
