@@ -8,6 +8,8 @@ class InboundItemObserver
 {
     public function created(InboundItem $inboundItem)
     {
-        $inboundItem->item->updateLatestStatus();
+        if ($inboundItem->item) {
+            $inboundItem->item->updateLatestStatus();
+        }
     }
 } 

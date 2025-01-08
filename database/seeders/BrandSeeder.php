@@ -12,7 +12,10 @@ class BrandSeeder extends Seeder
         $brands = [
             'Cisco',
             'Fortinet',
-            'Generic'
+            'HPE',
+            'Juniper',
+            'AMP',
+            'Panduit'
         ];
 
         foreach ($brands as $brandName) {

@@ -21,7 +21,6 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Filament\Widgets\StatsOverview;
 use Illuminate\Support\HtmlString;
 use App\Filament\Resources;
-use App\Filament\Pages\Reports\InventoryReport;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -77,14 +76,11 @@ class AdminPanelProvider extends PanelProvider
                     ->label('Master Data'),
                 NavigationGroup::make()
                     ->label('Transaksi'),
-                NavigationGroup::make()
-                    ->label('Laporan'),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
                 Pages\Dashboard::class,
-                InventoryReport::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([

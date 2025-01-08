@@ -99,9 +99,15 @@ class ItemResource extends Resource
                 Tables\Columns\TextColumn::make('serial_number')
                     ->label('Serial Number')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('inboundItems.inboundRecord.location')
+                Tables\Columns\TextColumn::make('latest_location')
                     ->label('Lokasi')
                     ->badge()
+                    ->state(function ($record) {
+                        return $record->inboundItems()
+                            ->join('inbound_records', 'inbound_items.inbound_id', '=', 'inbound_records.inbound_id')
+                            ->orderBy('inbound_records.receive_date', 'desc')
+                            ->value('inbound_records.location');
+                    })
                     ->color(fn ($state) => match($state) {
                         'Gudang Jakarta' => 'success',
                         'Gudang Surabaya' => 'warning',
