@@ -10,33 +10,28 @@ class VendorSeeder extends Seeder
 {
     public function run(): void
     {
-        $supplierType = VendorType::where('type_name', 'Supplier')->first();
-        $customerType = VendorType::where('type_name', 'Customer')->first();
+        // Buat vendor types terlebih dahulu
+        $supplierType = VendorType::firstOrCreate(['type_name' => 'Supplier']);
+        $customerType = VendorType::firstOrCreate(['type_name' => 'Customer']);
 
-        // Sample Suppliers
-        Vendor::create([
-            'vendor_type_id' => $supplierType->vendor_type_id,
-            'vendor_name' => 'PT Supplier Utama',
-            'address' => 'Jl. Supplier No. 1, Jakarta Selatan',
-        ]);
+        $vendors = [
+            [
+                'vendor_name' => 'PT Lintas Data Prima',
+                'vendor_type_id' => $supplierType->vendor_type_id,
+                'address' => 'Jakarta Selatan'
+            ],
+            [
+                'vendor_name' => 'PT Global Network Solution',
+                'vendor_type_id' => $customerType->vendor_type_id,
+                'address' => 'Jakarta Pusat'
+            ],
+        ];
 
-        Vendor::create([
-            'vendor_type_id' => $supplierType->vendor_type_id,
-            'vendor_name' => 'CV Maju Jaya',
-            'address' => 'Jl. Maju No. 123, Surabaya',
-        ]);
-
-        // Sample Customers
-        Vendor::create([
-            'vendor_type_id' => $customerType->vendor_type_id,
-            'vendor_name' => 'PT Customer Sejahtera',
-            'address' => 'Jl. Customer No. 45, Bandung',
-        ]);
-
-        Vendor::create([
-            'vendor_type_id' => $customerType->vendor_type_id,
-            'vendor_name' => 'CV Pelanggan Setia',
-            'address' => 'Jl. Setia No. 67, Semarang',
-        ]);
+        foreach ($vendors as $vendor) {
+            Vendor::firstOrCreate(
+                ['vendor_name' => $vendor['vendor_name']],
+                $vendor
+            );
+        }
     }
 } 

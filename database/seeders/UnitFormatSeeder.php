@@ -10,14 +10,16 @@ class UnitFormatSeeder extends Seeder
     public function run(): void
     {
         $formats = [
-            'Unit',
-            'Lonjor',
-            'Pack',
-            'Roll',
-            'Box',
-            'Meter',
-            'Set',
-            'Piece',
+            'PCS',
+            'BOX',
+            'SET',
+            'UNIT',
+            'ROLL',
+            'PACK',
+            'METER',
+            'LOT',
+            'BUNDLE',
+            'KG'
         ];
 
         foreach ($formats as $format) {

@@ -50,4 +50,9 @@ class InboundRecord extends Model
     {
         return $this->belongsTo(PartNumber::class, 'part_number_id');
     }
+
+    public function unitFormat()
+    {
+        return $this->belongsTo(UnitFormat::class, 'format_id');
+    }
 } 

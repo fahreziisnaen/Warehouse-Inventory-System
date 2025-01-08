@@ -11,17 +11,12 @@ class BrandSeeder extends Seeder
     {
         $brands = [
             'Cisco',
-            'Juniper',
             'Fortinet',
-            'Palo Alto',
-            'Arista',
-            'HPE',
-            'Mikrotik',
-            'Ubiquiti',
+            'Generic'
         ];
 
         foreach ($brands as $brandName) {
-            Brand::create(['brand_name' => $brandName]);
+            Brand::firstOrCreate(['brand_name' => $brandName]);
         }
     }
 }

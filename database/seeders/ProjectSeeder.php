@@ -3,31 +3,45 @@
 namespace Database\Seeders;
 
 use App\Models\Project;
-use App\Models\ProjectStatus;
 use App\Models\Vendor;
+use App\Models\ProjectStatus;
 use Illuminate\Database\Seeder;
 
 class ProjectSeeder extends Seeder
 {
     public function run(): void
     {
-        $statuses = ProjectStatus::all();
-        $customers = Vendor::customers()->get();
-        $counter = 1;
+        $customer = Vendor::where('vendor_type_id', function($query) {
+            $query->select('vendor_type_id')
+                ->from('vendor_types')
+                ->where('type_name', 'Customer')
+                ->first();
+        })->first();
 
-        foreach ($customers as $customer) {
-            // Buat 1-2 project untuk setiap customer
-            for ($i = 1; $i <= 2; $i++) {
-                Project::create([
-                    'project_id' => sprintf('PRJ-%03d', $counter),
-                    'project_name' => "Project {$customer->vendor_name} {$i}",
-                    'vendor_id' => $customer->vendor_id,
-                    'status_id' => $statuses->random()->status_id,
-                    'description' => "Sample project {$i} for {$customer->vendor_name}",
-                ]);
+        $activeStatus = ProjectStatus::where('name', 'Aktif')->first();
+        
+        $projects = [
+            [
+                'project_id' => 'PRJ-001',
+                'project_name' => 'Network Refresh 2024',
+                'vendor_id' => $customer->vendor_id,
+                'status_id' => $activeStatus->status_id,
+                'description' => 'Pembaruan infrastruktur jaringan'
+            ],
+            [
+                'project_id' => 'PRJ-002',
+                'project_name' => 'Data Center Expansion',
+                'vendor_id' => $customer->vendor_id,
+                'status_id' => $activeStatus->status_id,
+                'description' => 'Perluasan kapasitas data center'
+            ],
+        ];
 
-                $counter++;
-            }
+        foreach ($projects as $project) {
+            Project::firstOrCreate(
+                ['project_id' => $project['project_id']],
+                $project
+            );
         }
     }
 } 

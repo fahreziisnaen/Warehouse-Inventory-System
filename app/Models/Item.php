@@ -23,8 +23,6 @@ class Item extends Model
 
     protected $appends = ['status_label'];
 
-    const STATUS_BARU = 'baru';
-    const STATUS_BEKAS = 'bekas';
     const STATUS_DITERIMA = 'diterima';
     const STATUS_TERJUAL = 'terjual';
     const STATUS_MASA_SEWA = 'masa_sewa';
@@ -34,16 +32,13 @@ class Item extends Model
     public static function getInitialStatuses(): array
     {
         return [
-            self::STATUS_BARU => 'Baru',
-            self::STATUS_BEKAS => 'Bekas',
+            self::STATUS_DITERIMA => 'Diterima',
         ];
     }
 
     public static function getStatuses(): array
     {
         return [
-            self::STATUS_BARU => 'Baru',
-            self::STATUS_BEKAS => 'Bekas',
             self::STATUS_DITERIMA => 'Diterima',
             self::STATUS_TERJUAL => 'Terjual',
             self::STATUS_MASA_SEWA => 'Masa Sewa',

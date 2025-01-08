@@ -13,7 +13,8 @@ class PartNumber extends Model
     protected $fillable = [
         'brand_id',
         'part_number',
-        'description'
+        'description',
+        'is_equipment'
     ];
 
     public function brand(): BelongsTo

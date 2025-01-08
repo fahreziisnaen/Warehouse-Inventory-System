@@ -135,29 +135,12 @@ class ItemResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make()
-                    ->hidden(fn ($record) => $record->status === 'terjual')
-                    ->before(function ($record) {
-                        if ($record->status === 'terjual') {
-                            Notification::make()
-                                ->danger()
-                                ->title('Item tidak dapat diedit')
-                                ->body('Item yang sudah terjual tidak dapat diubah.')
-                                ->send();
-
-                            return false;
-                        }
-                    }),
+                    ->hidden(fn ($record) => $record->status === 'terjual'),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make()
-                        ->hidden(function (?Collection $records): bool {
-                            if (!$records) {
-                                return false;
-                            }
-                            return $records->contains('status', 'terjual');
-                        }),
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]))
@@ -177,7 +160,6 @@ class ItemResource extends Resource
     {
         return [
             'index' => Pages\ListItems::route('/'),
-            'create' => Pages\CreateItem::route('/create'),
             'view' => Pages\ViewItem::route('/{record}'),
             'edit' => Pages\EditItem::route('/{record}/edit'),
         ];

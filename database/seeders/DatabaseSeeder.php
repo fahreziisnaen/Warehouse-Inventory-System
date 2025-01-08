@@ -9,26 +9,22 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call([
-            // 1. Master Data Dasar
-            UserSeeder::class,
-            VendorTypeSeeder::class,
-            VendorSeeder::class,
-            BrandSeeder::class,
-            PartNumberSeeder::class,
-            ProjectStatusSeeder::class,
-            ProjectSeeder::class,
-            PurchaseOrderSeeder::class,
-            PurposeSeeder::class,
-
-            // 2. Format Unit untuk Batch Items
-            UnitFormatSeeder::class,
-
-            // 3. Items dan Batch Items
-            ItemSeeder::class,        // Membuat items dengan serial number
-            BatchItemSeeder::class,   // Membuat batch items dengan format unit
-
-            // 4. Transaksi Kombinasi
-            CombinedTransactionSeeder::class,  // Membuat inbound/outbound dengan kombinasi serial number dan batch
+            // Independent data
+            UserSeeder::class,           // Users untuk login
+            UnitFormatSeeder::class,     // Format unit untuk batch items
+            VendorTypeSeeder::class,     // Tipe vendor
+            ProjectStatusSeeder::class,   // Status project
+            PurposeSeeder::class,        // Tujuan outbound
+            BrandSeeder::class,          // Brand untuk part number
+            
+            // Dependent data
+            VendorSeeder::class,         // Butuh VendorType
+            ProjectSeeder::class,        // Butuh Vendor dan ProjectStatus
+            PartNumberSeeder::class,     // Butuh Brand
+            PurchaseOrderSeeder::class,  // Butuh Vendor dan Project
+            
+            // Transactions dengan aturan bisnis lengkap
+            CombinedTransactionSeeder::class,  // Menangani Inbound, Items, dan BatchItems
         ]);
     }
 }
