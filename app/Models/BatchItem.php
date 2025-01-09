@@ -26,12 +26,12 @@ class BatchItem extends Model
         return $this->hasMany(BatchItemHistory::class, 'batch_item_id');
     }
 
-    public function format(): BelongsTo
+    public function unitFormat(): BelongsTo
     {
-        return $this->belongsTo(UnitFormat::class, 'format_id');
+        return $this->belongsTo(UnitFormat::class, 'format_id', 'format_id');
     }
 
-    public static function updateQuantity($partNumberId, $quantity, $type, $record)
+    public static function updateQuantity($partNumberId, $quantity, $type, $record = null)
     {
         $batchItem = self::where('part_number_id', $partNumberId)->first();
         

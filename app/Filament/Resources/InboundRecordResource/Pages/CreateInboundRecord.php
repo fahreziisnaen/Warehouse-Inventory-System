@@ -41,8 +41,8 @@ class CreateInboundRecord extends CreateRecord
                         if ($existingItem) {
                             if ($existingItem->status === 'diterima') {
                                 $invalidSerials[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> masih berada di Gudang";
-                            } elseif (!in_array($existingItem->status, ['disewa', 'dipinjam', 'terjual'])) {
-                                $invalidSerials[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> memiliki status yang tidak valid ({$existingItem->status})";
+                            } elseif (!in_array($existingItem->status, ['disewa', 'dipinjam', 'terjual', 'unknown'])) {
+                                $invalidSerials[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> memiliki status yang tidak valid";
                             } else {
                                 $hasItems = true;
                             }
@@ -54,8 +54,13 @@ class CreateInboundRecord extends CreateRecord
             }
         }
 
-        $hasBatchItems = !empty($this->data['part_number_id']) && 
-            !empty($this->data['batch_quantity']);
+        // Cek Batch Items
+        $hasBatchItems = !empty($this->data['batchItems']) && collect($this->data['batchItems'])->some(function ($item) {
+            return !empty($item['brand_id']) && 
+                   !empty($item['part_number_id']) && 
+                   !empty($item['batch_quantity']) &&
+                   !empty($item['format_id']);
+        });
         
         // Jika ada serial number yang tidak valid
         if (!empty($invalidSerials)) {
@@ -202,18 +207,35 @@ class CreateInboundRecord extends CreateRecord
         }
 
         // Proses Batch Items
-        if (!empty($formData['part_number_id']) && !empty($formData['batch_quantity'])) {
-            $batchItem = BatchItem::firstOrCreate(
-                ['part_number_id' => $formData['part_number_id']],
-                ['quantity' => 0, 'format_id' => $formData['format_id'] ?? null]
-            );
+        if (!empty($formData['batchItems'])) {
+            foreach ($formData['batchItems'] as $batchItem) {
+                if (empty($batchItem['brand_id']) || 
+                    empty($batchItem['part_number_id']) || 
+                    empty($batchItem['batch_quantity']) ||
+                    empty($batchItem['format_id'])) {
+                    continue;
+                }
 
-            BatchItem::updateQuantity(
-                $formData['part_number_id'],
-                $formData['batch_quantity'],
-                'inbound',
-                $record
-            );
+                try {
+                    $existingBatchItem = BatchItem::firstOrCreate(
+                        ['part_number_id' => $batchItem['part_number_id']],
+                        ['quantity' => 0, 'format_id' => $batchItem['format_id']]
+                    );
+
+                    BatchItem::updateQuantity(
+                        $batchItem['part_number_id'],
+                        $batchItem['batch_quantity'],
+                        'inbound',
+                        $record
+                    );
+                } catch (\Exception $e) {
+                    Notification::make()
+                        ->title('Error')
+                        ->body("Gagal memproses Batch Item: " . $e->getMessage())
+                        ->danger()
+                        ->send();
+                }
+            }
         }
     }
 }

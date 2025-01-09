@@ -71,17 +71,20 @@ class ViewInboundRecord extends ViewRecord
 
                 Section::make('Batch Items')
                     ->schema([
-                        TextEntry::make('partNumber.brand.brand_name')
-                            ->label('Brand'),
-                        TextEntry::make('partNumber.part_number')
-                            ->label('Part Number'),
-                        TextEntry::make('batch_quantity')
-                            ->label('Quantity'),
-                        TextEntry::make('unitFormat.name')
-                            ->label('Satuan'),
+                        RepeatableEntry::make('batchItemHistories')
+                            ->schema([
+                                TextEntry::make('batchItem.partNumber.brand.brand_name')
+                                    ->label('Brand'),
+                                TextEntry::make('batchItem.partNumber.part_number')
+                                    ->label('Part Number'),
+                                TextEntry::make('quantity')
+                                    ->label('Quantity'),
+                                TextEntry::make('batchItem.unitFormat.name')
+                                    ->label('Satuan'),
+                            ])
+                            ->columns(4),
                     ])
-                    ->columns(4)
-                    ->visible(fn ($record) => !empty($record->part_number_id)),
+                    ->hidden(fn ($record) => !$record->batchItemHistories()->exists()),
             ]);
     }
 

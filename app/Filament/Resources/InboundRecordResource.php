@@ -151,97 +151,90 @@ class InboundRecordResource extends Resource
                             ->reorderableWithButtons()
                             ->collapsible()
                             ->minItems(0)
-                            ->live()
+                                    ->live()
                             ->hiddenOn('edit'),
                     ]),
 
                 // Section untuk Batch Items
                 Forms\Components\Section::make('Batch Items')
                     ->schema([
-                        Select::make('brand_id_batch')
-                            ->label('Brand')
-                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                            ->createOptionForm([
-                                TextInput::make('brand_name')
-                                    ->required()
-                                    ->unique('brands', 'brand_name')
-                            ])
-                            ->createOptionUsing(function (array $data) {
-                                return \App\Models\Brand::create([
-                                    'brand_name' => $data['brand_name']
-                                ])->brand_id;
-                            })
-                            ->nullable()
-                            ->reactive()
-                            ->afterStateUpdated(function (Set $set) {
-                                $set('part_number_id', null);
-                                $set('batch_quantity', null);
-                                $set('format_id', null);
-                            }),
-
-                        Select::make('part_number_id')
-                            ->label('Part Number')
-                            ->options(function (Get $get) {
-                                $brandId = $get('brand_id_batch');
-                                if (!$brandId) return [];
-                                return \App\Models\PartNumber::where('brand_id', $brandId)
-                                    ->pluck('part_number', 'part_number_id');
-                            })
-                            ->createOptionForm([
+                        Forms\Components\Repeater::make('batchItems')
+                            ->schema([
                                 Select::make('brand_id')
                                     ->label('Brand')
                                     ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                                    ->required(),
-                                TextInput::make('part_number')
-                                    ->required()
-                                    ->unique('part_numbers', 'part_number'),
-                                Textarea::make('description')
-                                    ->columnSpanFull(),
-                            ])
-                            ->createOptionUsing(function (array $data) {
-                                return \App\Models\PartNumber::create([
-                                    'brand_id' => $data['brand_id'],
-                                    'part_number' => $data['part_number'],
-                                    'description' => $data['description'] ?? null,
-                                ])->part_number_id;
-                            })
-                            ->required(fn (Get $get): bool => !empty($get('brand_id_batch')))
-                            ->disabled(fn (Get $get): bool => empty($get('brand_id_batch')))
-                            ->reactive()
-                            ->afterStateUpdated(function (Set $set) {
-                                $set('batch_quantity', null);
-                                $set('format_id', null);
-                            }),
+                                    ->reactive()
+                                    ->createOptionForm([
+                                        TextInput::make('brand_name')
+                                            ->required()
+                                            ->unique('brands', 'brand_name')
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\Brand::create([
+                                            'brand_name' => $data['brand_name']
+                                        ])->brand_id;
+                                    })
+                                    ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
 
-                        TextInput::make('batch_quantity')
-                            ->label('Quantity')
-                            ->numeric()
-                            ->minValue(1)
-                            ->required(fn (Get $get): bool => !empty($get('part_number_id')))
-                            ->disabled(fn (Get $get): bool => empty($get('part_number_id'))),
+                                Select::make('part_number_id')
+                                    ->label('Part Number')
+                                    ->options(function (callable $get) {
+                                        $brandId = $get('brand_id');
+                                        if (!$brandId) return [];
+                                        return \App\Models\PartNumber::where('brand_id', $brandId)
+                                            ->pluck('part_number', 'part_number_id');
+                                    })
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->reactive()
+                                    ->createOptionForm([
+                                        Select::make('brand_id')
+                                            ->label('Brand')
+                                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                            ->required(),
+                                        TextInput::make('part_number')
+                                            ->required()
+                                            ->unique('part_numbers', 'part_number'),
+                                        Textarea::make('description')
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\PartNumber::create([
+                                            'brand_id' => $data['brand_id'],
+                                            'part_number' => $data['part_number'],
+                                            'description' => $data['description'] ?? null,
+                                        ])->part_number_id;
+                                    }),
 
-                        Select::make('format_id')
-                            ->label('Satuan')
-                            ->relationship('unitFormat', 'name')
-                            ->required(fn (Get $get): bool => !empty($get('part_number_id')))
-                            ->disabled(fn (Get $get): bool => empty($get('part_number_id')))
-                            ->createOptionForm([
-                                TextInput::make('name')
-                                    ->label('Nama Satuan')
-                                    ->required()
-                                    ->unique('unit_formats', 'name')
-                                    ->helperText('Contoh: Unit, Pack, Roll, Box, Meter')
+                                TextInput::make('batch_quantity')
+                                    ->label('Quantity')
+                                    ->numeric()
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->minValue(1),
+
+                                Select::make('format_id')
+                                    ->label('Satuan')
+                                    ->options(fn () => \App\Models\UnitFormat::pluck('name', 'format_id'))
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->createOptionForm([
+                                        TextInput::make('name')
+                                            ->required()
+                                            ->unique('unit_formats', 'name')
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\UnitFormat::create([
+                                            'name' => $data['name']
+                                        ])->format_id;
+                                    }),
                             ])
-                            ->createOptionUsing(function (array $data) {
-                                return \App\Models\UnitFormat::create([
-                                    'name' => $data['name']
-                                ])->format_id;
-                            })
-                            ->preload()
-                            ->searchable(),
-                    ])
-                    ->columns(4)
-                    ->visible(fn ($record) => !$record || $record->part_number_id !== null),
+                            ->columns(4)
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah Batch Item')
+                            ->reorderableWithButtons()
+                            ->collapsible()
+                            ->minItems(0)
+                            ->live()
+                            ->hiddenOn('edit'),
+                    ]),
             ]);
     }
 
@@ -340,16 +333,16 @@ class InboundRecordResource extends Resource
                         TextEntry::make('receive_date')
                             ->label('Tanggal Terima')
                             ->date(),
-                        TextEntry::make('location')
-                            ->label('Lokasi'),
+                        TextEntry::make('po.po_number')
+                            ->label('No. PO'),
                         TextEntry::make('project.project_name')
                             ->label('Project'),
-                        TextEntry::make('purchaseOrder.po_number')
-                            ->label('No. PO'),
+                        TextEntry::make('location')
+                            ->label('Lokasi'),
                     ])
                     ->columns(2),
 
-                Section::make('Items')
+                Section::make('Items dengan Serial Number')
                     ->schema([
                         RepeatableEntry::make('inboundItems')
                             ->schema([
@@ -363,24 +356,30 @@ class InboundRecordResource extends Resource
                                     ->label('Quantity'),
                                 TextEntry::make('item.status')
                                     ->label('Status')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'diterima' => 'success',
+                                        default => 'warning',
+                                    }),
                             ])
                             ->columns(5),
                     ]),
 
-                // Tambahkan section untuk Batch Items
                 Section::make('Batch Items')
                     ->schema([
-                        TextEntry::make('partNumber.brand.brand_name')
-                            ->label('Brand'),
-                        TextEntry::make('partNumber.part_number')
-                            ->label('Part Number'),
-                        TextEntry::make('batch_quantity')
-                            ->label('Quantity'),
-                        TextEntry::make('unitFormat.name')
-                            ->label('Satuan'),
-                    ])
-                    ->columns(4)
-                    ->visible(fn ($record) => !empty($record->part_number_id)),
+                        RepeatableEntry::make('batchItemHistories')
+                            ->schema([
+                                TextEntry::make('batchItem.partNumber.brand.brand_name')
+                                    ->label('Brand'),
+                                TextEntry::make('batchItem.partNumber.part_number')
+                                    ->label('Part Number'),
+                                TextEntry::make('quantity')
+                                    ->label('Quantity'),
+                                TextEntry::make('batchItem.unitFormat.name')
+                                    ->label('Satuan'),
+                            ])
+                            ->columns(4),
+                    ]),
             ]);
     }
 

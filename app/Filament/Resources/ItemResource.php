@@ -38,42 +38,28 @@ class ItemResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()
-                    ->schema([
-                        Forms\Components\Select::make('part_number_id')
-                            ->relationship('partNumber', 'part_number')
-                            ->label('Part Number')
-                            ->required()
-                            ->preload()
-                            ->searchable()
-                            ->optionsLimit(15)
-                            ->createOptionForm([
-                                Forms\Components\Select::make('brand_id')
-                                    ->relationship('brand', 'brand_name')
-                                    ->required()
-                                    ->preload(),
-                                Forms\Components\TextInput::make('part_number')
-                                    ->required()
-                                    ->unique(),
-                                Forms\Components\Textarea::make('description')
-                                    ->columnSpanFull(),
-                            ]),
-                        Forms\Components\TextInput::make('serial_number')
-                            ->required()
-                            ->maxLength(255)
-                            ->unique(),
-                        Forms\Components\Select::make('status')
-                            ->options(function (Forms\Get $get, ?Model $record) {
-                                // Jika sedang create, hanya tampilkan status awal
-                                if (!$record) {
-                                    return Item::getInitialStatuses();
-                                }
-                                // Jika sedang edit, tampilkan semua status
-                                return Item::getStatuses();
-                            })
-                            ->required(),
+                Forms\Components\Select::make('part_number_id')
+                    ->relationship('partNumber', 'part_number')
+                    ->label('Part Number')
+                    ->required()
+                    ->disabled()
+                    ->dehydrated(false),
+
+                Forms\Components\TextInput::make('serial_number')
+                    ->required()
+                    ->maxLength(255),
+
+                Forms\Components\Select::make('status')
+                    ->options([
+                        'diterima' => 'Diterima',
+                        'dipinjam' => 'Dipinjam',
+                        'disewa' => 'Disewa',
+                        'terjual' => 'Terjual',
+                        'unknown' => 'Unknown',
                     ])
-                    ->columns(2),
+                    ->required()
+                    ->disabled()
+                    ->dehydrated(false),
             ]);
     }
 
@@ -136,9 +122,10 @@ class ItemResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make()
-                    ->hidden(fn ($record) => $record->status === 'terjual'),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->visible(fn (Item $record): bool => $record->status === 'unknown')
+                    ->requiresConfirmation(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
