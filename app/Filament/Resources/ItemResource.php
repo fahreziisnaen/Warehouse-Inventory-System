@@ -112,13 +112,17 @@ class ItemResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('status')
-                    ->options([
-                        'diterima' => 'Diterima',
-                        'terjual' => 'Terjual',
-                        'masa_sewa' => 'Masa Sewa',
-                        'dipinjam' => 'Dipinjam',
-                    ])
-                    ->label('Status'),
+                    ->label('Status')
+                    ->options(function () {
+                        return Item::distinct()
+                            ->pluck('status')
+                            ->mapWithKeys(function ($status) {
+                                return [$status => ucfirst($status)];
+                            })
+                            ->toArray();
+                    })
+                    ->multiple()
+                    ->searchable()
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -246,5 +250,10 @@ class ItemResource extends Resource
                             ->columns(3),
                     ]),
             ]);
+    }
+
+    public static function getRecordRouteKeyName(): string
+    {
+        return 'serial_number';
     }
 }

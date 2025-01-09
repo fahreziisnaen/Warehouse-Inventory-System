@@ -37,4 +37,9 @@ class Project extends Model
     {
         return $this->hasMany(OutboundRecord::class, 'project_id');
     }
+
+    public function getRouteKeyName()
+    {
+        return 'project_id';
+    }
 } 

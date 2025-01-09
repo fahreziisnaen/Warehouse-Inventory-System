@@ -150,7 +150,9 @@ class ProjectResource extends Resource
                         RepeatableEntry::make('inboundRecords')
                             ->schema([
                                 TextEntry::make('lpb_number')
-                                    ->label('Nomor LPB'),
+                                    ->label('Nomor LPB')
+                                    ->url(fn ($record) => url("/admin/inbound-records/{$record->inbound_id}"))
+                                    ->openUrlInNewTab(),
                                 TextEntry::make('receive_date')
                                     ->label('Tanggal Terima')
                                     ->date(),
@@ -160,7 +162,7 @@ class ProjectResource extends Resource
                                         return $record->inboundItems->count();
                                     }),
                             ])
-                            ->columns(3)
+                            ->columns(3),
                     ]),
 
                 Section::make('Barang Keluar')
@@ -168,7 +170,9 @@ class ProjectResource extends Resource
                         RepeatableEntry::make('outboundRecords')
                             ->schema([
                                 TextEntry::make('lkb_number')
-                                    ->label('Nomor LKB'),
+                                    ->label('Nomor LKB')
+                                    ->url(fn ($record) => url("/admin/outbound-records/{$record->outbound_id}"))
+                                    ->openUrlInNewTab(),
                                 TextEntry::make('delivery_date')
                                     ->label('Tanggal Keluar')
                                     ->date(),
@@ -180,8 +184,13 @@ class ProjectResource extends Resource
                                         return $record->outboundItems->count();
                                     }),
                             ])
-                            ->columns(4)
+                            ->columns(4),
                     ]),
             ]);
+    }
+
+    public static function getRecordRouteKeyName(): string
+    {
+        return 'project_id';
     }
 }

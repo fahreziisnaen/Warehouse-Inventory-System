@@ -16,6 +16,11 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
 use App\Models\BatchItem;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 
 class OutboundRecordResource extends Resource
 {
@@ -26,6 +31,7 @@ class OutboundRecordResource extends Resource
     protected static ?int $navigationSort = 3;
     protected static ?string $modelLabel = 'Barang Keluar';
     protected static ?string $pluralModelLabel = 'Barang Keluar';
+    protected static ?string $createButtonLabel = 'Buat Barang Keluar';
 
     public static function form(Form $form): Form
     {
@@ -76,85 +82,93 @@ class OutboundRecordResource extends Resource
                 Forms\Components\Section::make('Items')
                     ->schema([
                         Forms\Components\Repeater::make('outboundItems')
-                            ->relationship()
                             ->schema([
-                                Forms\Components\Select::make('item_id')
-                                    ->relationship(
-                                        'item', 
-                                        'serial_number',
-                                        fn (Builder $query, $record) => $query
-                                            ->when(
-                                                !$record,  // Jika create baru
-                                                fn ($query) => $query->where('status', 'diterima'),
-                                                fn ($query) => $query  // Jika edit
-                                                    ->where('status', 'diterima')
-                                                    ->when(
-                                                        $record?->outboundItems?->count(),
-                                                        fn ($query) => $query->orWhereIn('item_id', $record->outboundItems->pluck('item_id'))
-                                                    )
-                                            )
-                                    )
-                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->serial_number)
-                                    ->formatStateUsing(function ($state, $record) {
-                                        if ($state) {
-                                            $item = \App\Models\Item::find($state);
-                                            return $item ? $item->serial_number : $state;
-                                        }
-                                        return $state;
+                                Select::make('brand_id')
+                                    ->label('Brand')
+                                    ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->reactive()
+                                    ->createOptionForm([
+                                        TextInput::make('brand_name')
+                                            ->required()
+                                            ->unique('brands', 'brand_name')
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\Brand::create([
+                                            'brand_name' => $data['brand_name']
+                                        ])->brand_id;
                                     })
-                                    ->label('Serial Number')
+                                    ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
+
+                                Select::make('part_number_id')
+                                    ->label('Part Number')
+                                    ->options(function (callable $get) {
+                                        $brandId = $get('brand_id');
+                                        if (!$brandId) return [];
+                                        return \App\Models\PartNumber::where('brand_id', $brandId)
+                                            ->pluck('part_number', 'part_number_id');
+                                    })
                                     ->required()
-                                    ->preload()
-                                    ->searchable(['serial_number'])
-                                    ->live()
+                                    ->reactive()
+                                    ->createOptionForm([
+                                        Select::make('brand_id')
+                                            ->label('Brand')
+                                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                            ->required(),
+                                        TextInput::make('part_number')
+                                            ->required()
+                                            ->unique('part_numbers', 'part_number'),
+                                        Textarea::make('description')
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\PartNumber::create([
+                                            'brand_id' => $data['brand_id'],
+                                            'part_number' => $data['part_number'],
+                                            'description' => $data['description'] ?? null,
+                                        ])->part_number_id;
+                                    }),
+
+                                Textarea::make('bulk_serial_numbers')
+                                    ->label('Serial Numbers')
+                                    ->required()
+                                    ->helperText('Satu serial number per baris')
                                     ->afterStateUpdated(function ($state, Forms\Set $set, $get) {
                                         if ($state) {
-                                            $item = \App\Models\Item::find($state);
-                                            $set('current_status', $item?->status);
+                                            $serialNumbers = array_filter(
+                                                explode("\n", str_replace("\r", "", $state))
+                                            );
+                                            $serialNumbers = array_map('trim', $serialNumbers);
                                             
-                                            // Update status berdasarkan tujuan
-                                            $purposeId = $get('../../purpose_id');
-                                            if ($purposeId) {
-                                                $purpose = \App\Models\Purpose::find($purposeId);
-                                                $newStatus = match($purpose->name) {
-                                                    'Sewa' => 'masa_sewa',
-                                                    'Pembelian' => 'terjual',
-                                                    'Peminjaman' => 'dipinjam',
-                                                    default => $item?->status
-                                                };
-                                                $item->update(['status' => $newStatus]);
+                                            // Validasi serial numbers
+                                            foreach ($serialNumbers as $serialNumber) {
+                                                $item = \App\Models\Item::where('serial_number', $serialNumber)
+                                                    ->where('status', 'diterima')
+                                                    ->first();
+                                                
+                                                if (!$item) {
+                                                    $set('validation_error', "Serial Number {$serialNumber} tidak valid atau tidak tersedia");
+                                                    return;
+                                                }
                                             }
+                                            $set('validation_error', null);
                                         }
-                                    })
-                                    ->disabled(fn ($context) => $context === 'view'),
-                                Forms\Components\TextInput::make('current_status')
+                                    }),
+
+                                TextInput::make('validation_error')
                                     ->label('Status')
                                     ->disabled()
                                     ->dehydrated(false)
-                                    ->formatStateUsing(function ($state, $record) {
-                                        if ($record && $record->item) {
-                                            return ucfirst($record->item->status);
-                                        }
-                                        return ucfirst($state);
-                                    })
-                                    ->extraAttributes(['class' => 'text-center']),
-                                Forms\Components\TextInput::make('quantity')
-                                    ->label('Quantity')
-                                    ->required()
-                                    ->numeric()
-                                    ->default(1)
-                                    ->disabled()
-                                    ->minValue(1)
-                                    ->maxValue(1),
+                                    ->visible(fn ($get) => !empty($get('validation_error')))
+                                    ->extraAttributes(['class' => 'text-red-500']),
                             ])
                             ->columns(3)
                             ->defaultItems(1)
-                            ->reorderable(false)
-                            ->cloneable(false)
-                            ->disabled(fn ($context) => $context === 'view')
-                            ->disableItemCreation(fn ($context) => $context === 'view')
-                            ->disableItemDeletion(fn ($context) => $context === 'view')
-                            ->disableItemMovement(fn ($context) => $context === 'view'),
+                            ->addActionLabel('Tambah Item')
+                            ->reorderableWithButtons()
+                            ->collapsible()
+                            ->minItems(0)
+                            ->live()
+                            ->hiddenOn('edit'),
                     ]),
                 Forms\Components\Section::make('Batch Items')
                     ->schema([

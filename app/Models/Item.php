@@ -119,4 +119,9 @@ class Item extends Model
         };
         $this->update(['status' => $newStatus]);
     }
+
+    public function getRouteKeyName()
+    {
+        return 'serial_number';
+    }
 } 
