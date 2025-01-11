@@ -14,8 +14,7 @@ class ListOutboundRecords extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->label('Buat Barang Keluar')
-                ->icon('heroicon-o-plus'),
+                ->label('Buat Barang Keluar'),
         ];
     }
 }

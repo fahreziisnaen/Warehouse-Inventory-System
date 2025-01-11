@@ -15,6 +15,12 @@ use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
+use App\Models\BatchItem;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
 
 class OutboundRecordResource extends Resource
 {
@@ -25,6 +31,7 @@ class OutboundRecordResource extends Resource
     protected static ?int $navigationSort = 3;
     protected static ?string $modelLabel = 'Barang Keluar';
     protected static ?string $pluralModelLabel = 'Barang Keluar';
+    protected static ?string $createButtonLabel = 'Buat Barang Keluar';
 
     public static function form(Form $form): Form
     {
@@ -43,28 +50,25 @@ class OutboundRecordResource extends Resource
                             ->required()
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('vendor_id')
-                            ->relationship(
-                                'vendor', 
-                                'vendor_name',
-                                fn (Builder $query) => $query
-                                    ->whereHas('vendorType', fn($q) => 
+                            ->options(function () {
+                                return \App\Models\Vendor::whereHas('vendorType', fn($q) => 
                                         $q->where('type_name', 'Customer')
-                                    )
-                            )
+                                )->pluck('vendor_name', 'vendor_id');
+                            })
                             ->label('Customer')
                             ->required()
                             ->preload()
                             ->searchable()
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('project_id')
-                            ->relationship('project', 'project_id')
+                            ->options(fn () => \App\Models\Project::pluck('project_id', 'project_id'))
                             ->label('Project ID')
                             ->required()
                             ->preload()
                             ->searchable()
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('purpose_id')
-                            ->relationship('purpose', 'name')
+                            ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
                             ->label('Tujuan')
                             ->required()
                             ->preload()
@@ -75,86 +79,138 @@ class OutboundRecordResource extends Resource
                 Forms\Components\Section::make('Items')
                     ->schema([
                         Forms\Components\Repeater::make('outboundItems')
-                            ->relationship()
                             ->schema([
-                                Forms\Components\Select::make('item_id')
-                                    ->relationship(
-                                        'item', 
-                                        'serial_number',
-                                        fn (Builder $query, $record) => $query
-                                            ->when(
-                                                !$record,  // Jika create baru
-                                                fn ($query) => $query->where('status', 'diterima'),
-                                                fn ($query) => $query  // Jika edit
-                                                    ->where('status', 'diterima')
-                                                    ->when(
-                                                        $record?->outboundItems?->count(),
-                                                        fn ($query) => $query->orWhereIn('item_id', $record->outboundItems->pluck('item_id'))
-                                                    )
-                                            )
-                                    )
-                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->serial_number)
-                                    ->formatStateUsing(function ($state, $record) {
-                                        if ($state) {
-                                            $item = \App\Models\Item::find($state);
-                                            return $item ? $item->serial_number : $state;
-                                        }
-                                        return $state;
+                                Forms\Components\Select::make('brand_id')
+                                    ->label('Brand')
+                                    ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->reactive()
+                                    ->afterStateUpdated(function (Set $set) {
+                                        $set('part_number_id', null);
+                                        $set('bulk_serial_numbers', null);
+                                    }),
+
+                                Forms\Components\Select::make('part_number_id')
+                                    ->label('Part Number')
+                                    ->options(function (Get $get) {
+                                        $brandId = $get('brand_id');
+                                        if (!$brandId) return [];
+                                        return \App\Models\PartNumber::where('brand_id', $brandId)
+                                            ->pluck('part_number', 'part_number_id');
                                     })
-                                    ->label('Serial Number')
-                                    ->required()
-                                    ->preload()
-                                    ->searchable(['serial_number'])
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, Forms\Set $set, $get) {
-                                        if ($state) {
-                                            $item = \App\Models\Item::find($state);
-                                            $set('current_status', $item?->status);
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->disabled(fn (Get $get): bool => !filled($get('brand_id')))
+                                    ->reactive(),
+
+                                Forms\Components\Textarea::make('bulk_serial_numbers')
+                                    ->label('Serial Numbers')
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->disabled(fn (Get $get): bool => !filled($get('part_number_id')))
+                                    ->helperText('Satu serial number per baris')
+                                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                        if (!$state || !$get('brand_id')) return;
+                                        
+                                        $serialNumbers = array_filter(
+                                            explode("\n", str_replace("\r", "", $state))
+                                        );
+                                        $serialNumbers = array_map('trim', $serialNumbers);
+                                        
+                                        foreach ($serialNumbers as $serialNumber) {
+                                            $item = \App\Models\Item::where('serial_number', $serialNumber)
+                                                ->whereIn('status', ['diterima', 'unknown'])
+                                                ->first();
                                             
-                                            // Update status berdasarkan tujuan
-                                            $purposeId = $get('../../purpose_id');
-                                            if ($purposeId) {
-                                                $purpose = \App\Models\Purpose::find($purposeId);
-                                                $newStatus = match($purpose->name) {
-                                                    'Sewa' => 'masa_sewa',
-                                                    'Pembelian' => 'terjual',
-                                                    'Peminjaman' => 'dipinjam',
-                                                    default => $item?->status
-                                                };
-                                                $item->update(['status' => $newStatus]);
+                                            if (!$item) {
+                                                $set('validation_error', "Serial Number {$serialNumber} tidak valid atau tidak tersedia");
+                                                return;
                                             }
                                         }
-                                    })
-                                    ->disabled(fn ($context) => $context === 'view'),
-                                Forms\Components\TextInput::make('current_status')
+                                        $set('validation_error', null);
+                                    }),
+
+                                TextInput::make('validation_error')
                                     ->label('Status')
                                     ->disabled()
                                     ->dehydrated(false)
-                                    ->formatStateUsing(function ($state, $record) {
-                                        if ($record && $record->item) {
-                                            return ucfirst($record->item->status);
-                                        }
-                                        return ucfirst($state);
-                                    })
-                                    ->extraAttributes(['class' => 'text-center']),
-                                Forms\Components\TextInput::make('quantity')
-                                    ->label('Quantity')
-                                    ->required()
-                                    ->numeric()
-                                    ->default(1)
-                                    ->disabled()
-                                    ->minValue(1)
-                                    ->maxValue(1),
+                                    ->visible(fn ($get) => !empty($get('validation_error')))
+                                    ->extraAttributes(['class' => 'text-red-500']),
                             ])
                             ->columns(3)
                             ->defaultItems(1)
-                            ->reorderable(false)
-                            ->cloneable(false)
-                            ->disabled(fn ($context) => $context === 'view')
-                            ->disableItemCreation(fn ($context) => $context === 'view')
-                            ->disableItemDeletion(fn ($context) => $context === 'view')
-                            ->disableItemMovement(fn ($context) => $context === 'view'),
+                            ->addActionLabel('Tambah Item')
+                            ->reorderableWithButtons()
+                            ->collapsible()
+                            ->minItems(0)
+                            ->live()
                     ]),
+                Forms\Components\Section::make('Batch Items')
+                    ->schema([
+                        Forms\Components\Select::make('batch_brand_id')
+                            ->label('Brand')
+                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                            ->reactive()
+                            ->afterStateUpdated(function (Set $set) {
+                                $set('part_number_id', null);
+                                $set('batch_quantity', null);
+                                $set('available_quantity', null);
+                            }),
+
+                        Forms\Components\Select::make('part_number_id')
+                            ->label('Part Number')
+                            ->options(function (Get $get) {
+                                $brandId = $get('batch_brand_id');
+                                if (!$brandId) return [];
+                                return \App\Models\PartNumber::where('brand_id', $brandId)
+                                    ->pluck('part_number', 'part_number_id');
+                            })
+                            ->searchable()
+                            ->preload()
+                            ->live()
+                            ->required(fn (Get $get): bool => filled($get('batch_brand_id')))
+                            ->disabled(fn (Get $get): bool => !filled($get('batch_brand_id')))
+                            ->afterStateUpdated(function (Set $set, $state) {
+                                if (!$state) {
+                                    $set('batch_quantity', null);
+                                    $set('available_quantity', null);
+                                    return;
+                                }
+                                
+                                $batchItem = BatchItem::where('part_number_id', $state)->first();
+                                $set('available_quantity', $batchItem ? $batchItem->quantity : 0);
+                            }),
+
+                        Forms\Components\TextInput::make('batch_quantity')
+                            ->label('Quantity')
+                            ->numeric()
+                            ->minValue(1)
+                            ->visible(fn ($get) => $get('part_number_id'))
+                            ->live()
+                            ->required(fn ($get) => filled($get('part_number_id')))
+                            ->disabled(fn (Get $get): bool => !filled($get('part_number_id')))
+                            ->rules([
+                                'required',
+                                'numeric',
+                                'min:1',
+                                function (Get $get) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                        $availableQty = $get('available_quantity');
+                                        if ($value > $availableQty) {
+                                            $fail("Quantity tidak boleh melebihi stock yang tersedia ({$availableQty})");
+                                        }
+                                    };
+                                },
+                            ])
+                            ->validationMessages([
+                                'min' => 'Quantity minimal 1',
+                                'required' => 'Quantity harus diisi',
+                            ]),
+
+                        Forms\Components\TextInput::make('available_quantity')
+                            ->label('Available Stock')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->visible(fn ($get) => $get('part_number_id')),
+                    ])
+                    ->columns(4),
             ]);
     }
 
@@ -272,6 +328,16 @@ class OutboundRecordResource extends Resource
                             ])
                             ->columns(3)
                     ]),
+                Section::make('Batch Items')
+                    ->schema([
+                        TextEntry::make('part_number_id')
+                            ->label('Part Number')
+                            ->formatStateUsing(fn ($record) => $record->partNumber?->part_number ?? '-'),
+                        TextEntry::make('batch_quantity')
+                            ->label('Quantity'),
+                    ])
+                    ->visible(fn ($record) => $record->part_number_id !== null)
+                    ->columns(2),
             ]);
     }
 }

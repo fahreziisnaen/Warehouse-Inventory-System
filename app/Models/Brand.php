@@ -10,8 +10,7 @@ class Brand extends Model
     protected $primaryKey = 'brand_id';
     
     protected $fillable = [
-        'brand_name',
-        'description'
+        'brand_name'
     ];
 
     public function partNumbers(): HasMany

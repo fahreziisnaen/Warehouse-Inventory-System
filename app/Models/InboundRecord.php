@@ -14,11 +14,15 @@ class InboundRecord extends Model
         'lpb_number',
         'receive_date',
         'po_id',
-        'project_id'
+        'project_id',
+        'part_number_id',
+        'batch_quantity',
+        'location',
+        'format_id'
     ];
 
     protected $casts = [
-        'receive_date' => 'date'
+        'receive_date' => 'date',
     ];
 
     protected static ?string $label = 'Barang Masuk';
@@ -33,8 +37,35 @@ class InboundRecord extends Model
         return $this->belongsTo(Project::class, 'project_id', 'project_id');
     }
 
+    public function validInboundItems(): HasMany
+    {
+        return $this->hasMany(InboundItem::class, 'inbound_id')
+            ->whereHas('item', function ($query) {
+                $query->whereNotNull('serial_number')
+                    ->whereNotNull('part_number_id')
+                    ->whereHas('partNumber', function ($q) {
+                        $q->whereHas('brand');
+                    });
+            });
+    }
+
     public function inboundItems(): HasMany
     {
         return $this->hasMany(InboundItem::class, 'inbound_id');
+    }
+
+    public function batchItemHistories()
+    {
+        return $this->morphMany(BatchItemHistory::class, 'recordable');
+    }
+
+    public function partNumber(): BelongsTo
+    {
+        return $this->belongsTo(PartNumber::class, 'part_number_id');
+    }
+
+    public function unitFormat(): BelongsTo
+    {
+        return $this->belongsTo(UnitFormat::class, 'format_id');
     }
 } 

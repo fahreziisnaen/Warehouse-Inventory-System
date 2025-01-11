@@ -60,15 +60,6 @@ class ProjectResource extends Resource
                             ->required()
                             ->preload()
                             ->searchable(),
-                        Forms\Components\Textarea::make('description')
-                            ->maxLength(65535)
-                            ->columnSpanFull(),
-                        Forms\Components\Select::make('status_id')
-                            ->relationship('status', 'name')
-                            ->label('Status Project')
-                            ->required()
-                            ->preload()
-                            ->searchable(),
                     ])
                     ->columns(2),
             ]);
@@ -90,12 +81,6 @@ class ProjectResource extends Resource
                     ->label('Customer')
                     ->sortable()
                     ->searchable(),
-                BadgeColumn::make('status.name')
-                    ->label('Status')
-                    ->colors([
-                        'success' => 'Aktif',
-                        'danger' => 'Tidak Aktif',
-                    ]),
             ])
             ->filters([
                 //
@@ -142,11 +127,6 @@ class ProjectResource extends Resource
                             ->label('Nama Project'),
                         TextEntry::make('vendor.vendor_name')
                             ->label('Customer'),
-                        TextEntry::make('status.name')
-                            ->label('Status'),
-                        TextEntry::make('description')
-                            ->label('Deskripsi')
-                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
@@ -170,7 +150,9 @@ class ProjectResource extends Resource
                         RepeatableEntry::make('inboundRecords')
                             ->schema([
                                 TextEntry::make('lpb_number')
-                                    ->label('Nomor LPB'),
+                                    ->label('Nomor LPB')
+                                    ->url(fn ($record) => url("/admin/inbound-records/{$record->inbound_id}"))
+                                    ->openUrlInNewTab(),
                                 TextEntry::make('receive_date')
                                     ->label('Tanggal Terima')
                                     ->date(),
@@ -180,7 +162,7 @@ class ProjectResource extends Resource
                                         return $record->inboundItems->count();
                                     }),
                             ])
-                            ->columns(3)
+                            ->columns(3),
                     ]),
 
                 Section::make('Barang Keluar')
@@ -188,7 +170,9 @@ class ProjectResource extends Resource
                         RepeatableEntry::make('outboundRecords')
                             ->schema([
                                 TextEntry::make('lkb_number')
-                                    ->label('Nomor LKB'),
+                                    ->label('Nomor LKB')
+                                    ->url(fn ($record) => url("/admin/outbound-records/{$record->outbound_id}"))
+                                    ->openUrlInNewTab(),
                                 TextEntry::make('delivery_date')
                                     ->label('Tanggal Keluar')
                                     ->date(),
@@ -200,8 +184,13 @@ class ProjectResource extends Resource
                                         return $record->outboundItems->count();
                                     }),
                             ])
-                            ->columns(4)
+                            ->columns(4),
                     ]),
             ]);
+    }
+
+    public static function getRecordRouteKeyName(): string
+    {
+        return 'project_id';
     }
 }

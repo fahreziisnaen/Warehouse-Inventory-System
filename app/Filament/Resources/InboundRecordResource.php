@@ -18,6 +18,27 @@ use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Support\Enums\FontWeight;
+use Filament\Forms\Get;
+use Filament\Forms\Set;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Textarea;
+use Illuminate\Support\HtmlString;
+use App\Models\Item;
+use Filament\Forms\Components\Radio;
+use Filament\Notifications\Notification;
+use Filament\Forms\Components\Action;
+use Illuminate\Database\Eloquent\Model;
+use App\Models\BatchItem;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Infolists\Components\Grid;
+use Filament\Infolists\Components\Group;
+use Filament\Forms\Components\Actions\Action as DeleteAction;
+use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Action as FormAction;
 
 class InboundRecordResource extends Resource
 {
@@ -35,90 +56,184 @@ class InboundRecordResource extends Resource
             ->schema([
                 Forms\Components\Card::make()
                     ->schema([
-                        Forms\Components\TextInput::make('lpb_number')
-                            ->label('Nomor LPB')
+                        TextInput::make('lpb_number')
+                            ->label('No. LPB')
                             ->required()
-                            ->maxLength(255)
-                            ->unique(ignoreRecord: true)
-                            ->disabled(fn ($context) => $context === 'view'),
-                        Forms\Components\DatePicker::make('receive_date')
-                            ->label('Tanggal Penerimaan Barang')
+                            ->unique(ignoreRecord: true),
+                        DatePicker::make('receive_date')
+                            ->label('Tanggal Terima')
                             ->required()
-                            ->disabled(fn ($context) => $context === 'view'),
-                        Forms\Components\Select::make('po_id')
+                            ->default(now()),
+                        Select::make('location')
+                            ->label('Lokasi')
+                            ->options([
+                                'Gudang Jakarta' => 'Gudang Jakarta',
+                                'Gudang Surabaya' => 'Gudang Surabaya',
+                            ])
+                            ->required(),
+                    ])
+                    ->columns(2),
+
+                Forms\Components\Card::make()
+                    ->schema([
+                        Select::make('po_id')
                             ->relationship('purchaseOrder', 'po_number')
-                            ->label('Purchase Order')
-                            ->required()
-                            ->preload()
-                            ->searchable(),
-                        Forms\Components\Select::make('project_id')
+                            ->label('No. PO')
+                            ->searchable()
+                            ->preload(),
+                        Select::make('project_id')
                             ->relationship('project', 'project_id')
                             ->label('Project ID')
                             ->required()
-                            ->preload()
                             ->searchable()
-                            ->disabled(fn ($context) => $context === 'view'),
+                            ->preload(),
                     ])
                     ->columns(2),
-                Forms\Components\Section::make('Items')
+
+                // Section untuk Item dengan Serial Number
+                Forms\Components\Section::make('Items dengan Serial Number')
                     ->schema([
                         Forms\Components\Repeater::make('inboundItems')
-                            ->relationship()
                             ->schema([
-                                Forms\Components\Select::make('item_id')
-                                    ->relationship(
-                                        'item', 
-                                        'serial_number',
-                                        fn (Builder $query, $record) => $query
-                                            ->whereIn('status', ['baru', 'bekas', 'sewa_habis'])
-                                            ->when(
-                                                $record?->inboundItems,
-                                                fn (Builder $query) => $query->orWhereIn('item_id', $record->inboundItems->pluck('item_id'))
-                                            )
-                                    )
-                                    ->getOptionLabelFromRecordUsing(fn ($record) => $record->serial_number)
-                                    ->formatStateUsing(function ($state, $record) {
-                                        if ($state) {
-                                            $item = \App\Models\Item::find($state);
-                                            return $item ? $item->serial_number : $state;
-                                        }
-                                        return $state;
-                                    })
-                                    ->label('Serial Number')
+                                Select::make('brand_id')
+                                    ->label('Brand')
+                                    ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->reactive()
+                                    ->createOptionForm([
+                                        TextInput::make('brand_name')
                                     ->required()
-                                    ->preload()
-                                    ->searchable(['serial_number'])
-                                    ->live()
-                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                        if ($state) {
-                                            $item = \App\Models\Item::find($state);
-                                            $set('current_status', $item?->status);
-                                        }
+                                            ->unique('brands', 'brand_name')
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\Brand::create([
+                                            'brand_name' => $data['brand_name']
+                                        ])->brand_id;
                                     })
-                                    ->disabled(fn ($context) => $context === 'view'),
-                                Forms\Components\TextInput::make('current_status')
-                                    ->label('Status')
-                                    ->disabled()
-                                    ->dehydrated(false)
-                                    ->formatStateUsing(function ($state, $record) {
-                                        if ($record && $record->item) {
-                                            return ucfirst($record->item->status);
-                                        }
-                                        return ucfirst($state);
+                                    ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
+
+                                Select::make('part_number_id')
+                                    ->label('Part Number')
+                                    ->options(function (callable $get) {
+                                        $brandId = $get('brand_id');
+                                        if (!$brandId) return [];
+                                        return \App\Models\PartNumber::where('brand_id', $brandId)
+                                            ->pluck('part_number', 'part_number_id');
                                     })
-                                    ->extraAttributes(['class' => 'text-center']),
-                                Forms\Components\TextInput::make('quantity')
-                                    ->label('Quantity')
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->reactive()
+                                    ->createOptionForm([
+                                        Select::make('brand_id')
+                                            ->label('Brand')
+                                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                            ->required(),
+                                        TextInput::make('part_number')
                                     ->required()
-                                    ->numeric()
-                                    ->default(1)
-                                    ->disabled()
-                                    ->minValue(1)
-                                    ->maxValue(1),
+                                            ->unique('part_numbers', 'part_number'),
+                                        Textarea::make('description')
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\PartNumber::create([
+                                            'brand_id' => $data['brand_id'],
+                                            'part_number' => $data['part_number'],
+                                            'description' => $data['description'] ?? null,
+                                        ])->part_number_id;
+                                    }),
+
+                                Textarea::make('bulk_serial_numbers')
+                                    ->label('Serial Numbers')
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->helperText('Satu serial number per baris'),
                             ])
                             ->columns(3)
-                            ->defaultItems(1)
-                            ->disabled(fn ($context) => $context === 'view'),
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah Item')
+                            ->reorderableWithButtons()
+                            ->collapsible()
+                            ->minItems(0)
+                                    ->live()
+                            ->hiddenOn('edit'),
+                    ]),
+
+                // Section untuk Batch Items
+                Forms\Components\Section::make('Batch Items')
+                    ->schema([
+                        Forms\Components\Repeater::make('batchItems')
+                            ->schema([
+                                Select::make('brand_id')
+                                    ->label('Brand')
+                                    ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->reactive()
+                                    ->createOptionForm([
+                                        TextInput::make('brand_name')
+                                            ->required()
+                                            ->unique('brands', 'brand_name')
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\Brand::create([
+                                            'brand_name' => $data['brand_name']
+                                        ])->brand_id;
+                                    })
+                                    ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
+
+                                Select::make('part_number_id')
+                                    ->label('Part Number')
+                                    ->options(function (callable $get) {
+                                        $brandId = $get('brand_id');
+                                        if (!$brandId) return [];
+                                        return \App\Models\PartNumber::where('brand_id', $brandId)
+                                            ->pluck('part_number', 'part_number_id');
+                                    })
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->reactive()
+                                    ->createOptionForm([
+                                        Select::make('brand_id')
+                                            ->label('Brand')
+                                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                            ->required(),
+                                        TextInput::make('part_number')
+                                            ->required()
+                                            ->unique('part_numbers', 'part_number'),
+                                        Textarea::make('description')
+                                            ->columnSpanFull(),
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\PartNumber::create([
+                                            'brand_id' => $data['brand_id'],
+                                            'part_number' => $data['part_number'],
+                                            'description' => $data['description'] ?? null,
+                                        ])->part_number_id;
+                                    }),
+
+                                TextInput::make('batch_quantity')
+                                    ->label('Quantity')
+                                    ->numeric()
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->minValue(1),
+
+                                Select::make('format_id')
+                                    ->label('Satuan')
+                                    ->options(fn () => \App\Models\UnitFormat::pluck('name', 'format_id'))
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->createOptionForm([
+                                        TextInput::make('name')
+                                            ->required()
+                                            ->unique('unit_formats', 'name')
+                                    ])
+                                    ->createOptionUsing(function (array $data) {
+                                        return \App\Models\UnitFormat::create([
+                                            'name' => $data['name']
+                                        ])->format_id;
+                                    }),
+                            ])
+                            ->columns(4)
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah Batch Item')
+                            ->reorderableWithButtons()
+                            ->collapsible()
+                            ->minItems(0)
+                            ->live()
+                            ->hiddenOn('edit'),
                     ]),
             ]);
     }
@@ -128,27 +243,27 @@ class InboundRecordResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('lpb_number')
-                    ->label('Nomor LPB')
+                    ->label('No. LPB')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('receive_date')
-                    ->label('Tanggal Penerimaan Barang')
+                    ->label('Tanggal Terima')
                     ->date()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('purchaseOrder.po_number')
-                    ->label('Purchase Order')
-                    ->searchable()
-                    ->sortable(),
+                Tables\Columns\TextColumn::make('location')
+                    ->label('Lokasi')
+                    ->badge(),
                 Tables\Columns\TextColumn::make('project.project_id')
                     ->label('Project ID')
-                    ->sortable()
+                    ->searchable()
+                    ->sortable(),
+                Tables\Columns\TextColumn::make('project.project_name')
+                    ->label('Nama Project')
                     ->searchable(),
-                Tables\Columns\TextColumn::make('inboundItems.item.serial_number')
-                    ->label('Serial Numbers')
-                    ->listWithLineBreaks()
-                    ->limitList(3)
-                    ->expandableLimitedList()
-                    ->searchable(),
+                Tables\Columns\TextColumn::make('purchaseOrder.po_number')
+                    ->label('PO Number')
+                    ->searchable()
+                    ->sortable(),
             ])
             ->recordUrl(fn($record) => static::getUrl('view', ['record' => $record]))
             ->filters([
@@ -170,6 +285,13 @@ class InboundRecordResource extends Resource
                                 fn (Builder $query, $date): Builder => $query->whereDate('receive_date', '<=', $date),
                             );
                     }),
+                SelectFilter::make('location')
+                    ->label('Lokasi')
+                    ->options([
+                        'Gudang Jakarta' => 'Gudang Jakarta',
+                        'Gudang Surabaya' => 'Gudang Surabaya',
+                    ])
+                    ->searchable(),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
@@ -204,33 +326,136 @@ class InboundRecordResource extends Resource
     {
         return $infolist
             ->schema([
-                Section::make('Informasi Barang Masuk')
+                Section::make('Informasi Inbound')
                     ->schema([
                         TextEntry::make('lpb_number')
-                            ->label('Nomor LPB'),
+                            ->label('No. LPB'),
                         TextEntry::make('receive_date')
-                            ->label('Tanggal Penerimaan Barang')
+                            ->label('Tanggal Terima')
                             ->date(),
-                        TextEntry::make('purchaseOrder.po_number')
-                            ->label('Purchase Order'),
-                        TextEntry::make('project.project_id')
-                            ->label('Project ID'),
+                        TextEntry::make('po.po_number')
+                            ->label('No. PO'),
+                        TextEntry::make('project.project_name')
+                            ->label('Project'),
+                        TextEntry::make('location')
+                            ->label('Lokasi'),
                     ])
                     ->columns(2),
-                Section::make('Items')
+
+                Section::make('Items dengan Serial Number')
                     ->schema([
                         RepeatableEntry::make('inboundItems')
                             ->schema([
+                                TextEntry::make('item.partNumber.brand.brand_name')
+                                    ->label('Brand'),
+                                TextEntry::make('item.partNumber.part_number')
+                                    ->label('Part Number'),
                                 TextEntry::make('item.serial_number')
                                     ->label('Serial Number'),
-                                TextEntry::make('item.status')
-                                    ->label('Status')
-                                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
                                 TextEntry::make('quantity')
                                     ->label('Quantity'),
+                                TextEntry::make('item.status')
+                                    ->label('Status')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'diterima' => 'success',
+                                        default => 'warning',
+                                    }),
                             ])
-                            ->columns(3)
+                            ->columns(5),
+                    ]),
+
+                Section::make('Batch Items')
+                    ->schema([
+                        RepeatableEntry::make('batchItemHistories')
+                            ->schema([
+                                TextEntry::make('batchItem.partNumber.brand.brand_name')
+                                    ->label('Brand'),
+                                TextEntry::make('batchItem.partNumber.part_number')
+                                    ->label('Part Number'),
+                                TextEntry::make('quantity')
+                                    ->label('Quantity'),
+                                TextEntry::make('batchItem.unitFormat.name')
+                                    ->label('Satuan'),
+                            ])
+                            ->columns(4),
                     ]),
             ]);
+    }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        if (isset($data['inboundItems'])) {
+            $newInboundItems = [];
+            
+            foreach ($data['inboundItems'] as $key => $itemData) {
+                // Skip jika data tidak lengkap
+                if (empty($itemData['brand_id']) || 
+                    empty($itemData['part_number_id']) || 
+                    empty($itemData['bulk_serial_numbers'])) {
+                    continue;  // Skip iterasi ini dan lanjut ke data berikutnya
+                }
+
+                // Proses serial numbers
+                $serialNumbers = array_filter(
+                    explode("\n", str_replace("\r", "", $itemData['bulk_serial_numbers']))
+                );
+                $serialNumbers = array_map('trim', $serialNumbers);
+                
+                // Skip jika tidak ada serial number valid
+                if (empty($serialNumbers)) {
+                    continue;
+                }
+
+                foreach ($serialNumbers as $serialNumber) {
+                    if (empty($serialNumber)) continue;
+
+                    // Cek apakah serial number sudah ada
+                    $existingItem = Item::where('serial_number', $serialNumber)->first();
+
+                    if ($existingItem) {
+                        // Jika sudah ada, update status dan gunakan item yang ada
+                        $existingItem->update(['status' => 'diterima']);
+                        $newInboundItems[] = [
+                            'item_id' => $existingItem->item_id,
+                            'quantity' => 1
+                        ];
+                    } else {
+                        // Jika belum ada, buat item baru
+                        $newItem = Item::create([
+                            'part_number_id' => $itemData['part_number_id'],
+                            'serial_number' => $serialNumber,
+                            'status' => 'diterima'
+                        ]);
+                        
+                        if ($newItem && $newItem->item_id) {
+                            $newInboundItems[] = [
+                                'item_id' => $newItem->item_id,
+                                'quantity' => 1
+                            ];
+                        }
+                    }
+                }
+            }
+            
+            // Hanya set data jika ada item valid
+            if (!empty($newInboundItems)) {
+                $data['inboundItems'] = $newInboundItems;
+            } else {
+                // Hapus inboundItems jika tidak ada data valid
+                unset($data['inboundItems']);
+            }
+        }
+
+        return $data;
+    }
+
+    public static function getRecordWithRelations($record): Model
+    {
+        return static::getModel()::with([
+            'project.vendor',
+            'purchaseOrder',
+            'inboundItems.item.partNumber.brand'
+        ])->find($record->getKey());
     }
 }

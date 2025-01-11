@@ -35,12 +35,10 @@ class BrandResource extends Resource
                 Forms\Components\Card::make()
                     ->schema([
                         Forms\Components\TextInput::make('brand_name')
-                            ->label('Brand Name')
+                            ->label('Brand')
                             ->required()
-                            ->maxLength(255),
-                        Forms\Components\Textarea::make('description')
-                            ->maxLength(65535)
-                            ->columnSpanFull(),
+                            ->maxLength(255)
+                            ->unique(ignoreRecord: true),
                     ])
                     ->columns(2),
             ]);
@@ -51,12 +49,9 @@ class BrandResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('brand_name')
-                    ->label('Brand Name')
+                    ->label('Brand')
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('description')
-                    ->limit(50)
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -107,10 +102,7 @@ class BrandResource extends Resource
                 Section::make('Informasi Brand')
                     ->schema([
                         TextEntry::make('brand_name')
-                            ->label('Nama Brand'),
-                        TextEntry::make('description')
-                            ->label('Deskripsi')
-                            ->columnSpanFull(),
+                            ->label('Brand'),
                     ])
                     ->columns(2),
 

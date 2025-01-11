@@ -14,7 +14,7 @@ class PartNumber extends Model
         'brand_id',
         'part_number',
         'description',
-        'specifications'
+        'is_equipment'
     ];
 
     public function brand(): BelongsTo
@@ -25,5 +25,10 @@ class PartNumber extends Model
     public function items(): HasMany
     {
         return $this->hasMany(Item::class, 'part_number_id');
+    }
+
+    public function batchItems(): HasMany
+    {
+        return $this->hasMany(BatchItem::class, 'part_number_id');
     }
 } 

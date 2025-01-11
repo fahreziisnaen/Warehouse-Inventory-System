@@ -47,9 +47,6 @@ class PartNumberResource extends Resource
                         Forms\Components\Textarea::make('description')
                             ->maxLength(65535)
                             ->columnSpanFull(),
-                        Forms\Components\Textarea::make('specifications')
-                            ->maxLength(65535)
-                            ->columnSpanFull(),
                     ])
                     ->columns(2),
             ]);
@@ -126,9 +123,6 @@ class PartNumberResource extends Resource
                         TextEntry::make('description')
                             ->label('Deskripsi')
                             ->columnSpanFull(),
-                        TextEntry::make('specifications')
-                            ->label('Spesifikasi')
-                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
@@ -168,22 +162,37 @@ class PartNumberResource extends Resource
                 Section::make('Statistik')
                     ->schema([
                         TextEntry::make('items_count')
-                            ->label('Total Items')
+                            ->label('Total Perangkat')
                             ->state(function ($record) {
                                 return $record->items->count();
                             }),
-                        TextEntry::make('available_items_count')
-                            ->label('Items Tersedia')
+                        TextEntry::make('in_warehouse_count')
+                            ->label('Jumlah di Gudang')
                             ->state(function ($record) {
-                                return $record->items->whereIn('status', ['baru', 'bekas', 'diterima'])->count();
+                                return $record->items->where('status', 'diterima')->count();
                             }),
-                        TextEntry::make('used_items_count')
-                            ->label('Items Terpakai')
+                        TextEntry::make('rented_count')
+                            ->label('Jumlah Disewa')
                             ->state(function ($record) {
-                                return $record->items->whereIn('status', ['terjual', 'masa_sewa', 'dipinjam'])->count();
+                                return $record->items->where('status', 'masa_sewa')->count();
+                            }),
+                        TextEntry::make('sold_count')
+                            ->label('Jumlah Terjual')
+                            ->state(function ($record) {
+                                return $record->items->where('status', 'terjual')->count();
+                            }),
+                        TextEntry::make('borrowed_count')
+                            ->label('Jumlah Dipinjam')
+                            ->state(function ($record) {
+                                return $record->items->where('status', 'dipinjam')->count();
+                            }),
+                        TextEntry::make('unclear_count')
+                            ->label('Belum Masuk Laporan')
+                            ->state(function ($record) {
+                                return $record->items->whereIn('status', ['baru', 'bekas'])->count();
                             }),
                     ])
-                    ->columns(3),
+                    ->columns(6),
             ]);
     }
 }

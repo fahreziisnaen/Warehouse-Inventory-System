@@ -11,10 +11,9 @@ class Item extends Model
     protected $primaryKey = 'item_id';
     
     protected $fillable = [
-        'part_number_id',
         'serial_number',
         'status',
-        'manufacture_date'
+        'part_number_id'
     ];
 
     protected $casts = [
@@ -24,32 +23,27 @@ class Item extends Model
 
     protected $appends = ['status_label'];
 
-    const STATUS_BARU = 'baru';
-    const STATUS_BEKAS = 'bekas';
     const STATUS_DITERIMA = 'diterima';
     const STATUS_TERJUAL = 'terjual';
     const STATUS_MASA_SEWA = 'masa_sewa';
     const STATUS_DIPINJAM = 'dipinjam';
-    const STATUS_SEWA_HABIS = 'sewa_habis';
+    const STATUS_UNKNOWN = 'unknown';
 
     public static function getInitialStatuses(): array
     {
         return [
-            self::STATUS_BARU => 'Baru',
-            self::STATUS_BEKAS => 'Bekas',
+            self::STATUS_DITERIMA => 'Diterima',
         ];
     }
 
     public static function getStatuses(): array
     {
         return [
-            self::STATUS_BARU => 'Baru',
-            self::STATUS_BEKAS => 'Bekas',
             self::STATUS_DITERIMA => 'Diterima',
             self::STATUS_TERJUAL => 'Terjual',
             self::STATUS_MASA_SEWA => 'Masa Sewa',
             self::STATUS_DIPINJAM => 'Dipinjam',
-            self::STATUS_SEWA_HABIS => 'Sewa Habis',
+            self::STATUS_UNKNOWN => 'Unknown',
         ];
     }
 
@@ -71,5 +65,76 @@ class Item extends Model
     public function getStatusLabelAttribute(): string
     {
         return ucfirst($this->status);
+    }
+
+    public function updateLatestStatus()
+    {
+        // Ambil transaksi Inbound terbaru
+        $latestInbound = $this->inboundItems()
+            ->whereHas('inboundRecord', function ($query) {
+                $query->orderBy('receive_date', 'desc');
+            })
+            ->first();
+
+        // Ambil transaksi Outbound terbaru
+        $latestOutbound = $this->outboundItems()
+            ->whereHas('outboundRecord', function ($query) {
+                $query->orderBy('delivery_date', 'desc');
+            })
+            ->first();
+
+        // Bandingkan tanggal
+        if (!$latestInbound && !$latestOutbound) {
+            return; // Tidak ada transaksi
+        }
+
+        if (!$latestOutbound) {
+            $this->update(['status' => 'diterima']);
+            return;
+        }
+
+        if (!$latestInbound) {
+            $this->updateStatusFromOutbound($latestOutbound);
+            return;
+        }
+
+        $inboundDate = $latestInbound->inboundRecord->receive_date;
+        $outboundDate = $latestOutbound->outboundRecord->delivery_date;
+
+        if ($outboundDate > $inboundDate) {
+            // Jika outbound lebih baru, update status sesuai purpose
+            $this->updateStatusFromOutbound($latestOutbound);
+        } else {
+            // Jika inbound lebih baru, status = diterima
+            $this->update(['status' => 'diterima']);
+        }
+    }
+
+    private function updateStatusFromOutbound($outboundItem)
+    {
+        $purpose = $outboundItem->outboundRecord->purpose->name;
+        $newStatus = match($purpose) {
+            'Sewa' => 'masa_sewa',
+            'Pembelian' => 'terjual',
+            'Peminjaman' => 'dipinjam',
+            default => $this->status
+        };
+        $this->update(['status' => $newStatus]);
+    }
+
+    public function getRouteKeyName()
+    {
+        return 'serial_number';
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function ($item) {
+            // Hapus semua inbound items terkait
+            $item->inboundItems()->delete();
+            
+            // Hapus semua outbound items terkait
+            $item->outboundItems()->delete();
+        });
     }
 } 
