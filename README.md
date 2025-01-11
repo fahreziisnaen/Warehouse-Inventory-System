@@ -1,216 +1,153 @@
-<div align="center">
+# 📦 Sistem Manajemen Inventaris
 
-# 🏭 Warehouse Inventory System
+> Sistem manajemen inventaris berbasis Laravel dengan kemampuan pelacakan nomor seri.
 
-[![Laravel](https://img.shields.io/badge/Laravel-11.0-FF2D20?style=for-the-badge&logo=laravel&logoColor=white)](https://laravel.com)
-[![Filament](https://img.shields.io/badge/Filament-3.0-fb70a9?style=for-the-badge&logo=php&logoColor=white)](https://filamentphp.com)
-[![PHP](https://img.shields.io/badge/PHP-8.2-777BB4?style=for-the-badge&logo=php&logoColor=white)](https://php.net)
-[![MySQL](https://img.shields.io/badge/MySQL-00000F?style=for-the-badge&logo=mysql&logoColor=white)](https://www.mysql.com)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+![PHP Version](https://img.shields.io/badge/PHP-8.1+-777BB4?style=flat-square&logo=php&logoColor=white)
+![Laravel Version](https://img.shields.io/badge/Laravel-10.x-FF2D20?style=flat-square&logo=laravel&logoColor=white)
+![Filament Version](https://img.shields.io/badge/Filament-3.x-coral?style=flat-square)
+![MySQL](https://img.shields.io/badge/MySQL-latest-4479A1?style=flat-square&logo=mysql&logoColor=white)
 
-Sistem manajemen inventaris gudang modern berbasis web menggunakan Laravel 11 dan Filament 3. 
-Dirancang untuk memudahkan pengelolaan stok, pembelian, dan distribusi barang.
+## 🌟 Gambaran Umum
 
-[Lihat Demo](http://your-demo-link.com) • [Laporkan Bug](http://your-repo-link/issues) • [Ajukan Fitur](http://your-repo-link/issues)
+Solusi manajemen inventaris yang komprehensif dirancang untuk menangani inventaris masuk dan keluar dengan pelacakan nomor seri yang presisi. Cocok untuk bisnis yang mengelola produk berseri, penyewaan, dan item batch.
 
-![Dashboard Preview](https://via.placeholder.com/800x400?text=Dashboard+Preview)
+## ✨ Fitur Utama
 
-</div>
+### 📋 Manajemen Data Master
+- **Registrasi Merek** - Manajemen merek terpusat
+- **Sistem Part Number** - Pelacakan part yang terorganisir dengan relasi merek
+- **Manajemen Proyek** - Penanganan data proyek yang komprehensif
+- **Manajemen Vendor** - Database pelanggan & pemasok yang terpadu
+- **Format Satuan** - Sistem satuan yang fleksibel untuk item batch
 
-## ✨ Highlight Fitur
+### 📥 Proses Barang Masuk
+- Pencatatan berbasis LPB (Lembar Penerimaan Barang)
+- Dua metode input:
+  - Pelacakan Nomor Seri
+  - Pemrosesan Batch
+- Validasi nomor seri real-time
+- Pelacakan status
+- Integrasi dengan Purchase Order
 
-- 🏢 **Multi Warehouse Support** - Kelola beberapa gudang dalam satu sistem
-- 📦 **Real-time Inventory** - Pantau stok secara real-time
-- 🔄 **Purchase Order Management** - Otomatisasi proses pembelian
-- 📱 **Responsive Design** - Akses dari desktop maupun mobile
-- 🔒 **Role-based Access** - Kontrol akses berdasarkan peran
-- 📊 **Advanced Analytics** - Dashboard dan laporan yang komprehensif
+### 📤 Proses Barang Keluar
+- Dokumentasi LKB (Lembar Keluar Barang)
+- Beberapa metode pengiriman:
+  - Berbasis Nomor Seri
+  - Berbasis jumlah Batch
+- Mendukung berbagai jenis transaksi:
+  - Penyewaan
+  - Penjualan
+  - Peminjaman
+- Validasi stok & status otomatis
 
-## 🚀 Quick Start
+### 📊 Manajemen Stok
+- **Item dengan Nomor Seri:**
+  - Pelacakan nomor seri yang presisi
+  - Sistem status multi-kondisi
+  - Riwayat perpindahan yang komprehensif
+- **Item Batch:**
+  - Manajemen stok berbasis kuantitas
+  - Pencatatan riwayat transaksi
+  - Validasi kuantitas real-time
 
-### Persyaratan Sistem
+### 🛍️ Sistem Purchase Order
+- Pembuatan PO untuk pemasok
+- Integrasi dengan barang masuk yang mulus
+- Pemantauan status
 
-| Aplikasi | Versi Minimum |
-|----------|---------------|
-| PHP | 8.2 |
-| Composer | 2.0 |
-| MySQL/MariaDB | 5.7 |
-| Node.js | 16.0 |
-| NPM | 8.0 |
+## 🚀 Panduan Cepat
+
+### Prasyarat
+```bash
+PHP >= 8.1
+Composer
+MySQL
+```
 
 ### Instalasi
 
-1. **Clone Repository**
-   ```bash
-   git clone <repository-url>
-   cd warehouse-inventory-system
-   ```
-
-2. **Install Dependensi**
-   ```bash
-   composer install
-   npm install
-   ```
-
-3. **Setup Environment**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-4. **Konfigurasi Database**
-   ```env
-   DB_CONNECTION=mysql
-   DB_HOST=127.0.0.1
-   DB_PORT=3306
-   DB_DATABASE=warehouse_inventory
-   DB_USERNAME=root
-   DB_PASSWORD=
-   ```
-
-5. **Migrasi & Seeding**
-   ```bash
-   php artisan migrate:fresh --seed
-   php artisan storage:link
-   ```
-
-6. **Jalankan Aplikasi**
-   ```bash
-   php artisan serve
-   ```
-
-## 🎯 Fitur Utama
-
-### 📋 Master Data
-- 🏭 Supplier Management
-- ™️ Brand Management
-- 🔢 Part Number Management
-- 📦 Item Management
-- 👥 Customer Management
-- 📑 Project Management
-
-### 💼 Transaksi
-- 📝 Purchase Order
-- 📥 Barang Masuk (Inbound)
-- 📤 Barang Keluar (Outbound)
-
-### 📊 Laporan & Analytics
-- 📈 Laporan Inventaris Real-time
-- 📊 Dashboard Interaktif
-- 📉 Analisis Trend
-
-## 🏗 Struktur Aplikasi
-
-### 📁 Struktur Folder
-```
-warehouse-inventory-system/
-├── app/
-│   ├── Filament/
-│   │   ├── Resources/     # CRUD resources
-│   │   ├── Pages/        # Custom pages
-│   │   └── Widgets/      # Dashboard widgets
-│   ├── Models/           # Eloquent models
-│   └── Providers/        # Service providers
-├── database/
-│   ├── migrations/       # Database migrations
-│   └── seeders/         # Database seeders
-├── public/
-│   └── images/          # Assets
-└── resources/
-    └── views/
-        └── filament/     # Custom views
-```
-
-### 💾 Schema Database
-<details>
-<summary>Klik untuk melihat detail</summary>
-
-#### Core Tables
-- `suppliers` - Informasi supplier
-- `brands` - Data merek
-- `part_numbers` - Katalog part number
-- `items` - Inventaris barang
-- `customers` - Data pelanggan
-- `projects` - Informasi proyek
-
-#### Transaction Tables
-- `purchase_orders` - Data PO
-- `inbound_records` - Record barang masuk
-- `outbound_records` - Record barang keluar
-- `inbound_items` - Detail item masuk
-- `outbound_items` - Detail item keluar
-
-</details>
-
-## 👩‍💻 Development Guide
-
-### Membuat Resource Baru
+1. Clone repository
 ```bash
-php artisan make:filament-resource NamaResource
+git clone [repository-url]
 ```
 
-### Membuat Widget
+2. Install dependensi PHP
 ```bash
-php artisan make:filament-widget NamaWidget
+composer install
 ```
 
-### Kustomisasi Tema
-Edit `app/Providers/Filament/AdminPanelProvider.php`
-
-## 🔧 Troubleshooting
-
-<details>
-<summary><b>Masalah Permission</b></summary>
-
+3. Konfigurasi environment
 ```bash
-chmod -R 775 storage bootstrap/cache
+cp .env.example .env
+php artisan key:generate
 ```
-</details>
 
-<details>
-<summary><b>Update Composer</b></summary>
-
+4. Setup database
 ```bash
-composer dump-autoload
+php artisan migrate
+php artisan db:seed
 ```
-</details>
 
-<details>
-<summary><b>Clear Cache</b></summary>
-
+5. Jalankan aplikasi
 ```bash
-php artisan config:clear
-php artisan cache:clear
-php artisan view:clear
+php artisan serve
 ```
-</details>
 
-## 🛡 Security
+## 💡 Panduan Penggunaan
 
-- 🔐 Autentikasi Filament
-- 🔒 Password Hashing (bcrypt)
-- 🛡️ CSRF Protection
-- ✅ Form Validation
-- 🚫 Middleware Authentication
+### Alur Proses Barang Masuk
+1. Buat Purchase Order (opsional)
+2. Catat barang masuk:
+   - Isi detail LPB dan proyek
+   - Masukkan nomor seri atau jumlah batch
+   - Sistem memvalidasi dan menyimpan data
+
+### Alur Proses Barang Keluar
+1. Inisiasi record barang keluar
+2. Lengkapi form LKB dengan pelanggan dan tujuan
+3. Pilih metode pengiriman:
+   - Input nomor seri untuk item yang dilacak
+   - Input kuantitas untuk item batch
+4. Validasi stok dan pembaruan status otomatis
+
+## 🔒 Aturan Bisnis
+
+### Validasi Nomor Seri
+- Nomor seri unik untuk item masuk baru
+- Pengecekan ketersediaan berdasarkan status
+- Penghapusan bersyarat berdasarkan status item
+
+### Aturan Pemrosesan Batch
+- Validasi kuantitas berdasarkan stok
+- Penyesuaian inventaris otomatis
+- Kepatuhan format satuan
+
+## 🛠️ Pemeliharaan Data
+
+### Manajemen Record
+- **Barang Masuk:**
+  - Penghapusan dibatasi untuk status 'diterima'
+  - Penyesuaian stok otomatis saat penghapusan
+- **Barang Keluar:**
+  - Aturan penghapusan berdasarkan tujuan
+  - Pemulihan stok saat penghapusan
+
+### Manajemen Status
+- Transisi status otomatis
+- Jejak audit lengkap
+- Pemantauan status real-time
 
 ## 🤝 Kontribusi
 
-1. Fork repository ini
-2. Buat branch baru (`git checkout -b fitur-keren`)
-3. Commit perubahan (`git commit -am 'Menambah fitur keren'`)
-4. Push ke branch (`git push origin fitur-keren`)
-5. Buat Pull Request
+Kontribusi sangat diterima! Silakan kirim Pull Request.
 
 ## 📝 Lisensi
 
-Project ini dilisensikan di bawah [MIT License](LICENSE).
+[Jenis Lisensi]
+
+## 🔧 Dukungan
+
+Untuk dukungan, silakan buka issue di repository GitHub.
 
 ---
-
-<div align="center">
-
-### 🌟 Star us on GitHub — it helps!
-
-[Laporkan Bug](http://your-repo-link/issues) • [Dokumentasi](http://your-docs-link) • [Kontribusi](CONTRIBUTING.md)
-
-</div>
+Dibuat dengan ❤️ menggunakan Laravel & Filament
