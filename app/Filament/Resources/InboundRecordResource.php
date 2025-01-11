@@ -54,7 +54,7 @@ class InboundRecordResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Dasar')
                     ->schema([
                         TextInput::make('lpb_number')
                             ->label('No. LPB')
@@ -74,7 +74,7 @@ class InboundRecordResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Referensi')
                     ->schema([
                         Select::make('po_id')
                             ->relationship('purchaseOrder', 'po_number')

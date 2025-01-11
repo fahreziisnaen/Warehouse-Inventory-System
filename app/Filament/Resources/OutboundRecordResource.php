@@ -37,7 +37,7 @@ class OutboundRecordResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Dasar')
                     ->schema([
                         Forms\Components\TextInput::make('lkb_number')
                             ->label('Nomor LKB')

@@ -6,12 +6,6 @@ use App\Filament\Resources\InboundRecordResource;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Infolists\Infolist;
-use Filament\Tables;
-use Filament\Tables\Table;
 use App\Models\InboundItem;
 use Filament\Notifications\Notification;
 use Filament\Actions\Action;
@@ -273,7 +267,7 @@ class EditInboundRecord extends EditRecord
     public function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Card::make()
+            Forms\Components\Section::make('Informasi Dasar')
                 ->schema([
                     Forms\Components\TextInput::make('lpb_number')
                         ->label('No. LPB')
@@ -292,7 +286,7 @@ class EditInboundRecord extends EditRecord
                 ])
                 ->columns(2),
 
-            Forms\Components\Card::make()
+            Forms\Components\Section::make('Informasi Referensi')
                 ->schema([
                     Forms\Components\Select::make('po_id')
                         ->relationship('purchaseOrder', 'po_number')

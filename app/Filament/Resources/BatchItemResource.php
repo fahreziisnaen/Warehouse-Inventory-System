@@ -9,10 +9,6 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Filament\Forms\Components\TextEntry;
-use Filament\Forms\Components\RepeatableEntry;
-use Filament\Infolists\Infolist;
-use Filament\Infolists\Components\Section;
 
 class BatchItemResource extends Resource
 {
@@ -27,15 +23,19 @@ class BatchItemResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('part_number_id')
-                    ->relationship('partNumber', 'part_number')
-                    ->required(),
-                Forms\Components\TextInput::make('quantity')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\Select::make('format_id')
-                    ->relationship('unitFormat', 'name')
-                    ->required(),
+                Forms\Components\Section::make('Informasi Item')
+                    ->schema([
+                        Forms\Components\Select::make('part_number_id')
+                            ->relationship('partNumber', 'part_number')
+                            ->required(),
+                        Forms\Components\TextInput::make('quantity')
+                            ->required()
+                            ->numeric(),
+                        Forms\Components\Select::make('format_id')
+                            ->relationship('unitFormat', 'name')
+                            ->required(),
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -95,44 +95,5 @@ class BatchItemResource extends Resource
             'view' => Pages\ViewBatchItem::route('/{record}'),
             'edit' => Pages\EditBatchItem::route('/{record}/edit'),
         ];
-    }
-
-    public static function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist
-            ->schema([
-                Section::make('Informasi Item')
-                    ->schema([
-                        TextEntry::make('partNumber.brand.brand_name')
-                            ->label('Brand'),
-                        TextEntry::make('partNumber.part_number')
-                            ->label('Part Number'),
-                        TextEntry::make('quantity')
-                            ->label('Stock'),
-                        TextEntry::make('unitFormat.name')
-                            ->label('Satuan'),
-                    ])
-                    ->columns(2),
-
-                Section::make('Riwayat Transaksi')
-                    ->schema([
-                        RepeatableEntry::make('histories')
-                            ->schema([
-                                TextEntry::make('transaction_date')
-                                    ->label('Tanggal')
-                                    ->date(),
-                                TextEntry::make('type')
-                                    ->label('Tipe'),
-                                TextEntry::make('quantity')
-                                    ->label('Quantity'),
-                                TextEntry::make('transaction_source')
-                                    ->label('Sumber'),
-                                TextEntry::make('reference_number')
-                                    ->label('No. Referensi')
-                                    ->url(fn ($record) => $record->transaction_url),
-                            ])
-                            ->columns(5)
-                    ]),
-            ]);
     }
 } 

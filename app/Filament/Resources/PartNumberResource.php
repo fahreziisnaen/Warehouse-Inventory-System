@@ -32,7 +32,7 @@ class PartNumberResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Part Number')
                     ->schema([
                         Forms\Components\Select::make('brand_id')
                             ->relationship('brand', 'brand_name')

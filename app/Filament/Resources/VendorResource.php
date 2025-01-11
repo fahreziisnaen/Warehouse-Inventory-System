@@ -40,19 +40,23 @@ class VendorResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('vendor_type_id')
-                    ->relationship('vendorType', 'type_name')
-                    ->label('Customer/Supplier')
-                    ->required(),
-                Forms\Components\TextInput::make('vendor_name')
-                    ->label('Nama Perusahaan')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Textarea::make('address')
-                    ->label('Alamat')
-                    ->required()
-                    ->maxLength(65535)
-                    ->columnSpanFull(),
+                Forms\Components\Section::make('Informasi Vendor')
+                    ->schema([
+                        Forms\Components\Select::make('vendor_type_id')
+                            ->relationship('vendorType', 'type_name')
+                            ->label('Customer/Supplier')
+                            ->required(),
+                        Forms\Components\TextInput::make('vendor_name')
+                            ->label('Nama Perusahaan')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\Textarea::make('address')
+                            ->label('Alamat')
+                            ->required()
+                            ->maxLength(65535)
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
             ]);
     }
 

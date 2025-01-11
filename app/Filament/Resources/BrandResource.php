@@ -32,7 +32,7 @@ class BrandResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Brand')
                     ->schema([
                         Forms\Components\TextInput::make('brand_name')
                             ->label('Brand')

@@ -86,7 +86,7 @@ class EditOutboundRecord extends EditRecord
     public function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Card::make()
+            Forms\Components\Section::make('Informasi Dasar')
                 ->schema([
                     Forms\Components\TextInput::make('lkb_number')
                         ->label('Nomor LKB')
