@@ -50,28 +50,25 @@ class OutboundRecordResource extends Resource
                             ->required()
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('vendor_id')
-                            ->relationship(
-                                'vendor', 
-                                'vendor_name',
-                                fn (Builder $query) => $query
-                                    ->whereHas('vendorType', fn($q) => 
+                            ->options(function () {
+                                return \App\Models\Vendor::whereHas('vendorType', fn($q) => 
                                         $q->where('type_name', 'Customer')
-                                    )
-                            )
+                                )->pluck('vendor_name', 'vendor_id');
+                            })
                             ->label('Customer')
                             ->required()
                             ->preload()
                             ->searchable()
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('project_id')
-                            ->relationship('project', 'project_id')
+                            ->options(fn () => \App\Models\Project::pluck('project_id', 'project_id'))
                             ->label('Project ID')
                             ->required()
                             ->preload()
                             ->searchable()
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('purpose_id')
-                            ->relationship('purpose', 'name')
+                            ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
                             ->label('Tujuan')
                             ->required()
                             ->preload()
@@ -83,75 +80,51 @@ class OutboundRecordResource extends Resource
                     ->schema([
                         Forms\Components\Repeater::make('outboundItems')
                             ->schema([
-                                Select::make('brand_id')
+                                Forms\Components\Select::make('brand_id')
                                     ->label('Brand')
                                     ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
                                     ->reactive()
-                                    ->createOptionForm([
-                                        TextInput::make('brand_name')
-                                            ->required()
-                                            ->unique('brands', 'brand_name')
-                                    ])
-                                    ->createOptionUsing(function (array $data) {
-                                        return \App\Models\Brand::create([
-                                            'brand_name' => $data['brand_name']
-                                        ])->brand_id;
-                                    })
-                                    ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
+                                    ->afterStateUpdated(function (Set $set) {
+                                        $set('part_number_id', null);
+                                        $set('bulk_serial_numbers', null);
+                                    }),
 
-                                Select::make('part_number_id')
+                                Forms\Components\Select::make('part_number_id')
                                     ->label('Part Number')
-                                    ->options(function (callable $get) {
+                                    ->options(function (Get $get) {
                                         $brandId = $get('brand_id');
                                         if (!$brandId) return [];
                                         return \App\Models\PartNumber::where('brand_id', $brandId)
                                             ->pluck('part_number', 'part_number_id');
                                     })
-                                    ->required()
-                                    ->reactive()
-                                    ->createOptionForm([
-                                        Select::make('brand_id')
-                                            ->label('Brand')
-                                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                                            ->required(),
-                                        TextInput::make('part_number')
-                                            ->required()
-                                            ->unique('part_numbers', 'part_number'),
-                                        Textarea::make('description')
-                                            ->columnSpanFull(),
-                                    ])
-                                    ->createOptionUsing(function (array $data) {
-                                        return \App\Models\PartNumber::create([
-                                            'brand_id' => $data['brand_id'],
-                                            'part_number' => $data['part_number'],
-                                            'description' => $data['description'] ?? null,
-                                        ])->part_number_id;
-                                    }),
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->disabled(fn (Get $get): bool => !filled($get('brand_id')))
+                                    ->reactive(),
 
-                                Textarea::make('bulk_serial_numbers')
+                                Forms\Components\Textarea::make('bulk_serial_numbers')
                                     ->label('Serial Numbers')
-                                    ->required()
+                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->disabled(fn (Get $get): bool => !filled($get('part_number_id')))
                                     ->helperText('Satu serial number per baris')
-                                    ->afterStateUpdated(function ($state, Forms\Set $set, $get) {
-                                        if ($state) {
-                                            $serialNumbers = array_filter(
-                                                explode("\n", str_replace("\r", "", $state))
-                                            );
-                                            $serialNumbers = array_map('trim', $serialNumbers);
+                                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
+                                        if (!$state || !$get('brand_id')) return;
+                                        
+                                        $serialNumbers = array_filter(
+                                            explode("\n", str_replace("\r", "", $state))
+                                        );
+                                        $serialNumbers = array_map('trim', $serialNumbers);
+                                        
+                                        foreach ($serialNumbers as $serialNumber) {
+                                            $item = \App\Models\Item::where('serial_number', $serialNumber)
+                                                ->whereIn('status', ['diterima', 'unknown'])
+                                                ->first();
                                             
-                                            // Validasi serial numbers
-                                            foreach ($serialNumbers as $serialNumber) {
-                                                $item = \App\Models\Item::where('serial_number', $serialNumber)
-                                                    ->where('status', 'diterima')
-                                                    ->first();
-                                                
-                                                if (!$item) {
-                                                    $set('validation_error', "Serial Number {$serialNumber} tidak valid atau tidak tersedia");
-                                                    return;
-                                                }
+                                            if (!$item) {
+                                                $set('validation_error', "Serial Number {$serialNumber} tidak valid atau tidak tersedia");
+                                                return;
                                             }
-                                            $set('validation_error', null);
                                         }
+                                        $set('validation_error', null);
                                     }),
 
                                 TextInput::make('validation_error')
@@ -168,44 +141,76 @@ class OutboundRecordResource extends Resource
                             ->collapsible()
                             ->minItems(0)
                             ->live()
-                            ->hiddenOn('edit'),
                     ]),
                 Forms\Components\Section::make('Batch Items')
                     ->schema([
+                        Forms\Components\Select::make('batch_brand_id')
+                            ->label('Brand')
+                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                            ->reactive()
+                            ->afterStateUpdated(function (Set $set) {
+                                $set('part_number_id', null);
+                                $set('batch_quantity', null);
+                                $set('available_quantity', null);
+                            }),
+
                         Forms\Components\Select::make('part_number_id')
-                            ->relationship('partNumber', 'part_number')
-                            ->label('Part Number (Batch)')
+                            ->label('Part Number')
+                            ->options(function (Get $get) {
+                                $brandId = $get('batch_brand_id');
+                                if (!$brandId) return [];
+                                return \App\Models\PartNumber::where('brand_id', $brandId)
+                                    ->pluck('part_number', 'part_number_id');
+                            })
                             ->searchable()
                             ->preload()
                             ->live()
-                            ->afterStateUpdated(function ($state, Forms\Set $set) {
+                            ->required(fn (Get $get): bool => filled($get('batch_brand_id')))
+                            ->disabled(fn (Get $get): bool => !filled($get('batch_brand_id')))
+                            ->afterStateUpdated(function (Set $set, $state) {
                                 if (!$state) {
                                     $set('batch_quantity', null);
+                                    $set('available_quantity', null);
                                     return;
                                 }
                                 
-                                // Get available quantity
                                 $batchItem = BatchItem::where('part_number_id', $state)->first();
                                 $set('available_quantity', $batchItem ? $batchItem->quantity : 0);
                             }),
+
                         Forms\Components\TextInput::make('batch_quantity')
                             ->label('Quantity')
                             ->numeric()
                             ->minValue(1)
                             ->visible(fn ($get) => $get('part_number_id'))
+                            ->live()
+                            ->required(fn ($get) => filled($get('part_number_id')))
+                            ->disabled(fn (Get $get): bool => !filled($get('part_number_id')))
                             ->rules([
-                                fn ($get): string => 'max:' . ($get('available_quantity') ?? 0),
+                                'required',
+                                'numeric',
+                                'min:1',
+                                function (Get $get) {
+                                    return function (string $attribute, $value, \Closure $fail) use ($get) {
+                                        $availableQty = $get('available_quantity');
+                                        if ($value > $availableQty) {
+                                            $fail("Quantity tidak boleh melebihi stock yang tersedia ({$availableQty})");
+                                        }
+                                    };
+                                },
                             ])
                             ->validationMessages([
-                                'max' => 'The quantity cannot exceed the available stock of :max units.',
+                                'min' => 'Quantity minimal 1',
+                                'required' => 'Quantity harus diisi',
                             ]),
+
                         Forms\Components\TextInput::make('available_quantity')
                             ->label('Available Stock')
                             ->disabled()
                             ->dehydrated(false)
                             ->visible(fn ($get) => $get('part_number_id')),
                     ])
-                    ->columns(3),
+                    ->columns(4),
             ]);
     }
 

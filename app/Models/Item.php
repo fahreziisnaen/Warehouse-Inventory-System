@@ -27,6 +27,7 @@ class Item extends Model
     const STATUS_TERJUAL = 'terjual';
     const STATUS_MASA_SEWA = 'masa_sewa';
     const STATUS_DIPINJAM = 'dipinjam';
+    const STATUS_UNKNOWN = 'unknown';
 
     public static function getInitialStatuses(): array
     {
@@ -42,6 +43,7 @@ class Item extends Model
             self::STATUS_TERJUAL => 'Terjual',
             self::STATUS_MASA_SEWA => 'Masa Sewa',
             self::STATUS_DIPINJAM => 'Dipinjam',
+            self::STATUS_UNKNOWN => 'Unknown',
         ];
     }
 
@@ -123,5 +125,16 @@ class Item extends Model
     public function getRouteKeyName()
     {
         return 'serial_number';
+    }
+
+    protected static function booted()
+    {
+        static::deleting(function ($item) {
+            // Hapus semua inbound items terkait
+            $item->inboundItems()->delete();
+            
+            // Hapus semua outbound items terkait
+            $item->outboundItems()->delete();
+        });
     }
 } 

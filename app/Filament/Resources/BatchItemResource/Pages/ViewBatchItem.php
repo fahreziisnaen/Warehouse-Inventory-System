@@ -52,17 +52,20 @@ class ViewBatchItem extends ViewRecord
                                     }),
                                 TextEntry::make('quantity')
                                     ->label('Quantity'),
-                                TextEntry::make('recordable_type')
-                                    ->label('Sumber')
-                                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                                        'App\Models\InboundRecord' => 'Barang Masuk',
-                                        'App\Models\OutboundRecord' => 'Barang Keluar',
-                                        default => $state,
-                                    }),
-                                TextEntry::make('recordable.lpb_number')
+                                TextEntry::make('transaction_source')
+                                    ->label('Sumber'),
+                                TextEntry::make('reference_number')
                                     ->label('No. Referensi')
                                     ->url(fn ($record) => $record->transaction_url)
-                                    ->openUrlInNewTab(),
+                                    ->openUrlInNewTab()
+                                    ->weight('bold')
+                                    ->badge()
+                                    ->color(fn ($record, $state) => match ($record->type) {
+                                        'inbound' => 'success',
+                                        'outbound' => 'warning',
+                                        default => 'primary',
+                                    })
+                                    ->copyable(),
                             ])
                             ->columns(5),
                     ]),

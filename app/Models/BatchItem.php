@@ -41,8 +41,8 @@ class BatchItem extends Model
 
         if ($type === 'inbound') {
             $batchItem->quantity += $quantity;
-        } else {
-            $batchItem->quantity -= $quantity;
+        } elseif ($type === 'outbound') {
+            $batchItem->quantity -= abs($quantity);
         }
 
         $batchItem->save();
@@ -51,7 +51,7 @@ class BatchItem extends Model
         BatchItemHistory::create([
             'batch_item_id' => $batchItem->batch_item_id,
             'type' => $type,
-            'quantity' => $quantity,
+            'quantity' => $type === 'outbound' ? -abs($quantity) : $quantity,
             'recordable_type' => get_class($record),
             'recordable_id' => $record->getKey()
         ]);

@@ -358,7 +358,25 @@ class EditInboundRecord extends EditRecord
         $inboundItem = InboundItem::find($inboundItemId);
         
         if ($inboundItem) {
-            // Update status item menjadi unknown
+            // Cek status item
+            if ($inboundItem->item && $inboundItem->item->status !== 'diterima') {
+                Notification::make()
+                    ->title('Item tidak dapat dihapus')
+                    ->body("Item dengan status '{$inboundItem->item->status}' tidak dapat dihapus karena sudah diproses di transaksi lain.")
+                    ->danger()
+                    ->persistent()
+                    ->actions([
+                        \Filament\Notifications\Actions\Action::make('close')
+                            ->label('Tutup')
+                            ->color('danger')
+                            ->close()
+                    ])
+                    ->send();
+                    
+                return;
+            }
+
+            // Jika status diterima, lanjutkan proses delete
             if ($inboundItem->item) {
                 $inboundItem->item->update([
                     'status' => 'unknown'

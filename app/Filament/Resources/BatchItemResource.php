@@ -9,6 +9,10 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Forms\Components\TextEntry;
+use Filament\Forms\Components\RepeatableEntry;
+use Filament\Infolists\Infolist;
+use Filament\Infolists\Components\Section;
 
 class BatchItemResource extends Resource
 {
@@ -91,5 +95,44 @@ class BatchItemResource extends Resource
             'view' => Pages\ViewBatchItem::route('/{record}'),
             'edit' => Pages\EditBatchItem::route('/{record}/edit'),
         ];
+    }
+
+    public static function infolist(Infolist $infolist): Infolist
+    {
+        return $infolist
+            ->schema([
+                Section::make('Informasi Item')
+                    ->schema([
+                        TextEntry::make('partNumber.brand.brand_name')
+                            ->label('Brand'),
+                        TextEntry::make('partNumber.part_number')
+                            ->label('Part Number'),
+                        TextEntry::make('quantity')
+                            ->label('Stock'),
+                        TextEntry::make('unitFormat.name')
+                            ->label('Satuan'),
+                    ])
+                    ->columns(2),
+
+                Section::make('Riwayat Transaksi')
+                    ->schema([
+                        RepeatableEntry::make('histories')
+                            ->schema([
+                                TextEntry::make('transaction_date')
+                                    ->label('Tanggal')
+                                    ->date(),
+                                TextEntry::make('type')
+                                    ->label('Tipe'),
+                                TextEntry::make('quantity')
+                                    ->label('Quantity'),
+                                TextEntry::make('transaction_source')
+                                    ->label('Sumber'),
+                                TextEntry::make('reference_number')
+                                    ->label('No. Referensi')
+                                    ->url(fn ($record) => $record->transaction_url),
+                            ])
+                            ->columns(5)
+                    ]),
+            ]);
     }
 } 

@@ -28,9 +28,28 @@ class BatchItemHistory extends Model
         return $this->morphTo();
     }
 
+    // Tambahkan accessor untuk nomor referensi
+    public function getReferenceNumberAttribute()
+    {
+        if (!$this->recordable) {
+            return 'Deleted Record';
+        }
+
+        return match($this->recordable_type) {
+            'App\Models\InboundRecord' => $this->recordable->lpb_number,
+            'App\Models\OutboundRecord' => $this->recordable->lkb_number,
+            default => '-'
+        };
+    }
+
     // Tambahkan accessor untuk tanggal
     public function getTransactionDateAttribute()
     {
+        // Jika recordable sudah dihapus, gunakan created_at
+        if (!$this->recordable) {
+            return $this->created_at;
+        }
+
         return match($this->recordable_type) {
             'App\Models\InboundRecord' => $this->recordable->receive_date,
             'App\Models\OutboundRecord' => $this->recordable->delivery_date,
@@ -45,6 +64,21 @@ class BatchItemHistory extends Model
             'App\Models\InboundRecord' => url("/admin/inbound-records/{$this->recordable_id}"),
             'App\Models\OutboundRecord' => url("/admin/outbound-records/{$this->recordable_id}"),
             default => null
+        };
+    }
+
+    // Tambahkan juga accessor untuk sumber transaksi
+    public function getTransactionSourceAttribute()
+    {
+        // Jika recordable sudah dihapus, berikan informasi "Deleted Record"
+        if (!$this->recordable) {
+            return 'Deleted ' . str_replace('App\\Models\\', '', $this->recordable_type);
+        }
+
+        return match($this->recordable_type) {
+            'App\Models\InboundRecord' => 'Barang Masuk',
+            'App\Models\OutboundRecord' => 'Barang Keluar',
+            default => 'Unknown'
         };
     }
 } 

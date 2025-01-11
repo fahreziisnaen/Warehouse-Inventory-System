@@ -57,8 +57,8 @@ class PurchaseOrderResource extends Resource
                             ->preload()
                             ->searchable(),
                         Forms\Components\Select::make('project_id')
-                            ->relationship('project', 'project_name')
-                            ->label('Project')
+                            ->relationship('project', 'project_id')
+                            ->label('Project ID')
                             ->required()
                             ->preload()
                             ->searchable(),
@@ -83,8 +83,8 @@ class PurchaseOrderResource extends Resource
                     ->label('Supplier')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('project.project_name')
-                    ->label('Project')
+                Tables\Columns\TextColumn::make('project.project_id')
+                    ->label('Project ID')
                     ->sortable()
                     ->searchable(),
             ])
@@ -110,7 +110,7 @@ class PurchaseOrderResource extends Resource
                 SelectFilter::make('vendor')
                     ->relationship('vendor', 'vendor_name'),
                 SelectFilter::make('project')
-                    ->relationship('project', 'project_name'),
+                    ->relationship('project', 'project_id'),
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
