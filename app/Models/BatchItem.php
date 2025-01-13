@@ -23,7 +23,16 @@ class BatchItem extends Model
 
     public function histories(): HasMany
     {
-        return $this->hasMany(BatchItemHistory::class, 'batch_item_id');
+        return $this->hasMany(BatchItemHistory::class, 'batch_item_id')
+            ->orderByDesc(
+                \DB::raw("COALESCE(
+                    CASE 
+                        WHEN recordable_type = 'App\\Models\\InboundRecord' THEN (SELECT receive_date FROM inbound_records WHERE inbound_id = recordable_id)
+                        WHEN recordable_type = 'App\\Models\\OutboundRecord' THEN (SELECT delivery_date FROM outbound_records WHERE outbound_id = recordable_id)
+                    END,
+                    created_at
+                )")
+            );
     }
 
     public function unitFormat(): BelongsTo

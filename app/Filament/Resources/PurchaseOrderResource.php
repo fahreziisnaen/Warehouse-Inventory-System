@@ -28,20 +28,21 @@ class PurchaseOrderResource extends Resource
     protected static ?int $navigationSort = 1;
     protected static ?string $modelLabel = 'Purchase Order';
     protected static ?string $pluralModelLabel = 'Purchase Orders';
+    protected static ?string $createButtonLabel = 'Buat Purchase Order';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Purchase Order')
                     ->schema([
                         Forms\Components\TextInput::make('po_number')
-                            ->label('PO Number')
+                            ->label('Nomor PO')
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true),
                         Forms\Components\DatePicker::make('po_date')
-                            ->label('PO Date')
+                            ->label('Tanggal PO')
                             ->required(),
                         Forms\Components\Select::make('vendor_id')
                             ->relationship(
@@ -154,9 +155,13 @@ class PurchaseOrderResource extends Resource
                             ->label('Tanggal PO')
                             ->date(),
                         TextEntry::make('vendor.vendor_name')
-                            ->label('Supplier'),
+                            ->label('Supplier')
+                            ->url(fn ($record) => url("/admin/vendors/{$record->vendor_id}"))
+                            ->openUrlInNewTab(),
                         TextEntry::make('project.project_id')
-                            ->label('Project ID'),
+                            ->label('Project ID')
+                            ->url(fn ($record) => url("/admin/projects/{$record->project_id}"))
+                            ->openUrlInNewTab(),
                     ])
                     ->columns(2),
                 Section::make('Barang Masuk')
@@ -164,7 +169,9 @@ class PurchaseOrderResource extends Resource
                         RepeatableEntry::make('inboundRecords')
                             ->schema([
                                 TextEntry::make('lpb_number')
-                                    ->label('Nomor LPB'),
+                                    ->label('Nomor LPB')
+                                    ->url(fn ($record) => url("/admin/inbound-records/{$record->inbound_id}"))
+                                    ->openUrlInNewTab(),
                                 TextEntry::make('receive_date')
                                     ->label('Tanggal Terima')
                                     ->date(),

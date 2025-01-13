@@ -21,7 +21,7 @@ class EditOutboundRecord extends EditRecord
     {
         return [
             Action::make('addItem')
-                ->label('Add Item')
+                ->label('Tambah Item')
                 ->icon('heroicon-o-plus')
                 ->action(function (array $data): void {
                     $this->addItem($data);
@@ -51,7 +51,7 @@ class EditOutboundRecord extends EditRecord
                 ]),
 
             Action::make('addBatchItem')
-                ->label('Add Batch Item')
+                ->label('Tambah Batch Item')
                 ->icon('heroicon-o-plus')
                 ->action(function (array $data): void {
                     $this->addBatchItem($data);
@@ -86,14 +86,14 @@ class EditOutboundRecord extends EditRecord
     public function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\Card::make()
+            Forms\Components\Section::make('Informasi Dasar')
                 ->schema([
                     Forms\Components\TextInput::make('lkb_number')
                         ->label('Nomor LKB')
                         ->required()
                         ->unique(ignoreRecord: true),
                     Forms\Components\DatePicker::make('delivery_date')
-                        ->label('Delivery Date')
+                        ->label('Tanggal Keluar')
                         ->required(),
                     Forms\Components\Select::make('vendor_id')
                         ->relationship(
@@ -249,12 +249,12 @@ class EditOutboundRecord extends EditRecord
             );
 
             Notification::make()
-                ->title('Batch item added successfully')
+                ->title('Batch item berhasil ditambahkan')
                 ->success()
                 ->send();
         } catch (\Exception $e) {
             Notification::make()
-                ->title('Error adding batch item')
+                ->title('Gagal menambahkan batch item')
                 ->body($e->getMessage())
                 ->danger()
                 ->send();
@@ -298,7 +298,7 @@ class EditOutboundRecord extends EditRecord
             $outboundItem->delete();
 
             Notification::make()
-                ->title('Item deleted successfully')
+                ->title('Item berhasil dihapus')
                 ->success()
                 ->send();
 

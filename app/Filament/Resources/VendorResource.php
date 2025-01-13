@@ -21,38 +21,36 @@ class VendorResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static ?int $navigationSort = 4;
+    protected static ?string $navigationGroup = 'Master Data';
+
+    protected static ?int $navigationSort = 5;
 
     protected static ?string $modelLabel = 'Vendor';
     protected static ?string $pluralModelLabel = 'Vendor';
 
-    public static function getNavigationLabel(): string
-    {
-        return 'Vendor';
-    }
-
-    public static function getCreateButtonLabel(): string
-    {
-        return 'Buat Vendor';
-    }
+    protected static ?string $createButtonLabel = 'Buat Vendor';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Forms\Components\Select::make('vendor_type_id')
-                    ->relationship('vendorType', 'type_name')
-                    ->label('Customer/Supplier')
-                    ->required(),
-                Forms\Components\TextInput::make('vendor_name')
-                    ->label('Nama Perusahaan')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\Textarea::make('address')
-                    ->label('Alamat')
-                    ->required()
-                    ->maxLength(65535)
-                    ->columnSpanFull(),
+                Forms\Components\Section::make('Informasi Vendor')
+                    ->schema([
+                        Forms\Components\Select::make('vendor_type_id')
+                            ->relationship('vendorType', 'type_name')
+                            ->label('Customer/Supplier')
+                            ->required(),
+                        Forms\Components\TextInput::make('vendor_name')
+                            ->label('Nama Perusahaan')
+                            ->required()
+                            ->maxLength(255),
+                        Forms\Components\Textarea::make('address')
+                            ->label('Alamat')
+                            ->required()
+                            ->maxLength(65535)
+                            ->columnSpanFull(),
+                    ])
+                    ->columns(2),
             ]);
     }
 
@@ -106,26 +104,6 @@ class VendorResource extends Resource
             'view' => Pages\ViewVendor::route('/{record}'),
             'edit' => Pages\EditVendor::route('/{record}/edit'),
         ];
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery();
-    }
-
-    public static function getModelLabel(): string
-    {
-        return 'Vendor';
-    }
-
-    public static function getPluralModelLabel(): string
-    {
-        return 'Vendor';
-    }
-
-    public static function getNavigationGroup(): ?string
-    {
-        return 'Master Data';
     }
 
     public static function infolist(Infolist $infolist): Infolist

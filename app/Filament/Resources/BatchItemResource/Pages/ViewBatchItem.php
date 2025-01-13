@@ -8,6 +8,7 @@ use Filament\Infolists\Infolist;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Support\Enums\FontWeight;
 
 class ViewBatchItem extends ViewRecord
 {
@@ -20,11 +21,15 @@ class ViewBatchItem extends ViewRecord
                 Section::make('Informasi Item')
                     ->schema([
                         TextEntry::make('partNumber.brand.brand_name')
-                            ->label('Brand'),
+                            ->label('Brand')
+                            ->weight(FontWeight::Bold),
                         TextEntry::make('partNumber.part_number')
-                            ->label('Part Number'),
+                            ->label('Part Number')
+                            ->weight(FontWeight::Bold),
                         TextEntry::make('quantity')
-                            ->label('Stock'),
+                            ->label('Stock')
+                            ->badge()
+                            ->color('success'),
                         TextEntry::make('unitFormat.name')
                             ->label('Satuan'),
                     ])
@@ -51,16 +56,22 @@ class ViewBatchItem extends ViewRecord
                                         default => ucfirst($state),
                                     }),
                                 TextEntry::make('quantity')
-                                    ->label('Quantity'),
+                                    ->label('Quantity')
+                                    ->formatStateUsing(fn ($record) => 
+                                        ($record->type === 'outbound' ? '-' : '+') . abs($record->quantity)
+                                    )
+                                    ->color(fn ($record) => 
+                                        $record->type === 'outbound' ? 'danger' : 'success'
+                                    ),
                                 TextEntry::make('transaction_source')
                                     ->label('Sumber'),
                                 TextEntry::make('reference_number')
                                     ->label('No. Referensi')
                                     ->url(fn ($record) => $record->transaction_url)
                                     ->openUrlInNewTab()
-                                    ->weight('bold')
+                                    ->weight(FontWeight::Bold)
                                     ->badge()
-                                    ->color(fn ($record, $state) => match ($record->type) {
+                                    ->color(fn ($record) => match ($record->type) {
                                         'inbound' => 'success',
                                         'outbound' => 'warning',
                                         default => 'primary',

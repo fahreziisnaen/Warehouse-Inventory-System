@@ -54,7 +54,7 @@ class InboundRecordResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Dasar')
                     ->schema([
                         TextInput::make('lpb_number')
                             ->label('No. LPB')
@@ -74,7 +74,7 @@ class InboundRecordResource extends Resource
                     ])
                     ->columns(2),
 
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Referensi')
                     ->schema([
                         Select::make('po_id')
                             ->relationship('purchaseOrder', 'po_number')
@@ -206,10 +206,14 @@ class InboundRecordResource extends Resource
                                     }),
 
                                 TextInput::make('batch_quantity')
-                                    ->label('Quantity')
+                                    ->label('Jumlah')
                                     ->numeric()
-                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
-                                    ->minValue(1),
+                                    ->minValue(1)
+                                    ->validationMessages([
+                                        'min' => 'Jumlah minimal 1',
+                                        'required' => 'Jumlah harus diisi',
+                                        'numeric' => 'Jumlah harus berupa angka'
+                                    ]),
 
                                 Select::make('format_id')
                                     ->label('Satuan')
@@ -320,67 +324,6 @@ class InboundRecordResource extends Resource
             'view' => Pages\ViewInboundRecord::route('/{record}'),
             'edit' => Pages\EditInboundRecord::route('/{record}/edit'),
         ];
-    }
-
-    public static function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist
-            ->schema([
-                Section::make('Informasi Inbound')
-                    ->schema([
-                        TextEntry::make('lpb_number')
-                            ->label('No. LPB'),
-                        TextEntry::make('receive_date')
-                            ->label('Tanggal Terima')
-                            ->date(),
-                        TextEntry::make('po.po_number')
-                            ->label('No. PO'),
-                        TextEntry::make('project.project_name')
-                            ->label('Project'),
-                        TextEntry::make('location')
-                            ->label('Lokasi'),
-                    ])
-                    ->columns(2),
-
-                Section::make('Items dengan Serial Number')
-                    ->schema([
-                        RepeatableEntry::make('inboundItems')
-                            ->schema([
-                                TextEntry::make('item.partNumber.brand.brand_name')
-                                    ->label('Brand'),
-                                TextEntry::make('item.partNumber.part_number')
-                                    ->label('Part Number'),
-                                TextEntry::make('item.serial_number')
-                                    ->label('Serial Number'),
-                                TextEntry::make('quantity')
-                                    ->label('Quantity'),
-                                TextEntry::make('item.status')
-                                    ->label('Status')
-                                    ->badge()
-                                    ->color(fn (string $state): string => match ($state) {
-                                        'diterima' => 'success',
-                                        default => 'warning',
-                                    }),
-                            ])
-                            ->columns(5),
-                    ]),
-
-                Section::make('Batch Items')
-                    ->schema([
-                        RepeatableEntry::make('batchItemHistories')
-                            ->schema([
-                                TextEntry::make('batchItem.partNumber.brand.brand_name')
-                                    ->label('Brand'),
-                                TextEntry::make('batchItem.partNumber.part_number')
-                                    ->label('Part Number'),
-                                TextEntry::make('quantity')
-                                    ->label('Quantity'),
-                                TextEntry::make('batchItem.unitFormat.name')
-                                    ->label('Satuan'),
-                            ])
-                            ->columns(4),
-                    ]),
-            ]);
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array

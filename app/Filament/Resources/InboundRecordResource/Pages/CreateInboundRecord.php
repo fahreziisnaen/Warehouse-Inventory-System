@@ -10,6 +10,12 @@ use App\Models\BatchItem;
 use Filament\Notifications\Notification;
 use Filament\Notifications\Actions\Action;
 use Illuminate\Support\HtmlString;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Form;
+use Filament\Forms;
 
 class CreateInboundRecord extends CreateRecord
 {
@@ -237,5 +243,46 @@ class CreateInboundRecord extends CreateRecord
                 }
             }
         }
+    }
+
+    public function form(Form $form): Form
+    {
+        return $form->schema([
+            Section::make('Informasi Dasar')
+                ->schema([
+                    TextInput::make('lpb_number')
+                        ->label('No. LPB')
+                        ->required()
+                        ->unique(),
+                    DatePicker::make('receive_date')
+                        ->label('Tanggal Terima')
+                        ->required(),
+                    Select::make('location')
+                        ->label('Lokasi')
+                        ->options([
+                            'Gudang Jakarta' => 'Gudang Jakarta',
+                            'Gudang Surabaya' => 'Gudang Surabaya',
+                        ])
+                        ->required(),
+                ])
+                ->columns(2),
+
+            Section::make('Informasi Referensi')
+                ->schema([
+                    Select::make('po_id')
+                        ->relationship('purchaseOrder', 'po_number')
+                        ->label('No. PO')
+                        ->searchable()
+                        ->preload(),
+                    Select::make('project_id')
+                        ->relationship('project', 'project_id')
+                        ->label('Project ID')
+                        ->required()
+                        ->searchable()
+                        ->preload(),
+                ])
+                ->columns(2),
+            // ... rest of the schema
+        ]);
     }
 }

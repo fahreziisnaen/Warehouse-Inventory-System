@@ -36,7 +36,7 @@ class ProjectResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Card::make()
+                Forms\Components\Section::make('Informasi Project')
                     ->schema([
                         Forms\Components\TextInput::make('project_id')
                             ->label('Project ID')
