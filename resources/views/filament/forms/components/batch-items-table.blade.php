@@ -5,9 +5,9 @@
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Brand</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Part Number</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Quantity</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Jumlah</th>
                     <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Satuan</th>
-                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                    <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
@@ -22,9 +22,9 @@
                                 type="button"
                                 wire:click="deleteBatchItem({{ $item['id'] }})"
                                 class="text-red-600 hover:text-red-900 font-medium hover:underline focus:outline-none"
-                                onclick="return confirm('Are you sure you want to delete this batch item?')"
+                                onclick="return confirm('Apakah Anda yakin ingin menghapus batch item ini?')"
                             >
-                                Delete
+                                Hapus
                             </button>
                         </td>
                     </tr>

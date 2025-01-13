@@ -29,9 +29,9 @@
                                 type="button"
                                 wire:click="deleteOutboundItem({{ $item['id'] }})"
                                 class="text-red-600 hover:text-red-900 font-medium hover:underline focus:outline-none"
-                                onclick="return confirm('Are you sure you want to delete this item?')"
+                                onclick="return confirm('Apakah Anda yakin ingin menghapus item ini?')"
                             >
-                                Delete
+                                Hapus
                             </button>
                         </td>
                     </tr>

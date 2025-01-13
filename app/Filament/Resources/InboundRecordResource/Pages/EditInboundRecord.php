@@ -21,7 +21,7 @@ class EditInboundRecord extends EditRecord
     {
         return [
             Action::make('addItem')
-                ->label('Add Item')
+                ->label('Tambah Item')
                 ->icon('heroicon-o-plus')
                 ->action(function (array $data): void {
                     $this->addItem($data);
@@ -79,7 +79,7 @@ class EditInboundRecord extends EditRecord
                 ]),
 
             Action::make('addBatchItem')
-                ->label('Add Batch Item')
+                ->label('Tambah Batch Item')
                 ->icon('heroicon-o-plus')
                 ->action(function (array $data): void {
                     $this->addBatchItem($data);
@@ -381,7 +381,7 @@ class EditInboundRecord extends EditRecord
             $inboundItem->delete();
 
             Notification::make()
-                ->title('Item deleted successfully')
+                ->title('Item berhasil dihapus')
                 ->success()
                 ->send();
 
@@ -409,7 +409,7 @@ class EditInboundRecord extends EditRecord
             $history->delete();
 
             Notification::make()
-                ->title('Batch item deleted successfully')
+                ->title('Batch item berhasil dihapus')
                 ->success()
                 ->send();
 

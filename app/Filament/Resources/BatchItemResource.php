@@ -27,13 +27,19 @@ class BatchItemResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('part_number_id')
                             ->relationship('partNumber', 'part_number')
-                            ->required(),
-                        Forms\Components\TextInput::make('quantity')
+                            ->label('Part Number')
                             ->required()
-                            ->numeric(),
+                            ->searchable(),
+                        Forms\Components\TextInput::make('quantity')
+                            ->label('Stock')
+                            ->required()
+                            ->numeric()
+                            ->minValue(0),
                         Forms\Components\Select::make('format_id')
                             ->relationship('unitFormat', 'name')
-                            ->required(),
+                            ->label('Satuan')
+                            ->required()
+                            ->searchable(),
                     ])
                     ->columns(2),
             ]);

@@ -12,10 +12,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Infolists\Infolist;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\RepeatableEntry;
 
 class PartNumberResource extends Resource
 {
@@ -108,91 +104,5 @@ class PartNumberResource extends Resource
     public static function getCreateButtonLabel(): string
     {
         return static::$createButtonLabel;
-    }
-
-    public static function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist
-            ->schema([
-                Section::make('Informasi Part Number')
-                    ->schema([
-                        TextEntry::make('part_number')
-                            ->label('Part Number'),
-                        TextEntry::make('brand.brand_name')
-                            ->label('Brand'),
-                        TextEntry::make('description')
-                            ->label('Deskripsi')
-                            ->columnSpanFull(),
-                    ])
-                    ->columns(2),
-
-                Section::make('Items')
-                    ->schema([
-                        RepeatableEntry::make('items')
-                            ->schema([
-                                TextEntry::make('serial_number')
-                                    ->label('Serial Number'),
-                                TextEntry::make('status')
-                                    ->label('Status')
-                                    ->badge()
-                                    ->formatStateUsing(fn (string $state) => ucfirst($state))
-                                    ->color(fn (string $state): string => match ($state) {
-                                        'baru' => 'success',
-                                        'bekas' => 'warning',
-                                        'diterima' => 'info',
-                                        'terjual' => 'danger',
-                                        'masa_sewa' => 'purple',
-                                        'dipinjam' => 'secondary',
-                                        'sewa_habis' => 'rose',
-                                    }),
-                                TextEntry::make('inboundItems_count')
-                                    ->label('Jumlah Inbound')
-                                    ->state(function ($record) {
-                                        return $record->inboundItems->count();
-                                    }),
-                                TextEntry::make('outboundItems_count')
-                                    ->label('Jumlah Outbound')
-                                    ->state(function ($record) {
-                                        return $record->outboundItems->count();
-                                    }),
-                            ])
-                            ->columns(4)
-                    ]),
-
-                Section::make('Statistik')
-                    ->schema([
-                        TextEntry::make('items_count')
-                            ->label('Total Perangkat')
-                            ->state(function ($record) {
-                                return $record->items->count();
-                            }),
-                        TextEntry::make('in_warehouse_count')
-                            ->label('Jumlah di Gudang')
-                            ->state(function ($record) {
-                                return $record->items->where('status', 'diterima')->count();
-                            }),
-                        TextEntry::make('rented_count')
-                            ->label('Jumlah Disewa')
-                            ->state(function ($record) {
-                                return $record->items->where('status', 'masa_sewa')->count();
-                            }),
-                        TextEntry::make('sold_count')
-                            ->label('Jumlah Terjual')
-                            ->state(function ($record) {
-                                return $record->items->where('status', 'terjual')->count();
-                            }),
-                        TextEntry::make('borrowed_count')
-                            ->label('Jumlah Dipinjam')
-                            ->state(function ($record) {
-                                return $record->items->where('status', 'dipinjam')->count();
-                            }),
-                        TextEntry::make('unclear_count')
-                            ->label('Belum Masuk Laporan')
-                            ->state(function ($record) {
-                                return $record->items->whereIn('status', ['baru', 'bekas'])->count();
-                            }),
-                    ])
-                    ->columns(6),
-            ]);
     }
 }

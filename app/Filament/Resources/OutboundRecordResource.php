@@ -200,8 +200,9 @@ class OutboundRecordResource extends Resource
                                 },
                             ])
                             ->validationMessages([
-                                'min' => 'Quantity minimal 1',
-                                'required' => 'Quantity harus diisi',
+                                'min' => 'Jumlah minimal 1',
+                                'required' => 'Jumlah harus diisi',
+                                'numeric' => 'Jumlah harus berupa angka'
                             ]),
 
                         Forms\Components\TextInput::make('available_quantity')
@@ -293,51 +294,5 @@ class OutboundRecordResource extends Resource
             'view' => Pages\ViewOutboundRecord::route('/{record}'),
             'edit' => Pages\EditOutboundRecord::route('/{record}/edit'),
         ];
-    }
-
-    public static function infolist(Infolist $infolist): Infolist
-    {
-        return $infolist
-            ->schema([
-                Section::make('Informasi Barang Keluar')
-                    ->schema([
-                        TextEntry::make('lkb_number')
-                            ->label('Nomor LKB'),
-                        TextEntry::make('delivery_date')
-                            ->label('Tanggal Keluar')
-                            ->date(),
-                        TextEntry::make('vendor.vendor_name')
-                            ->label('Customer'),
-                        TextEntry::make('project.project_id')
-                            ->label('Project ID'),
-                        TextEntry::make('purpose.name')
-                            ->label('Tujuan'),
-                    ])
-                    ->columns(2),
-                Section::make('Items')
-                    ->schema([
-                        RepeatableEntry::make('outboundItems')
-                            ->schema([
-                                TextEntry::make('item.serial_number')
-                                    ->label('Serial Number'),
-                                TextEntry::make('item.status')
-                                    ->label('Status')
-                                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
-                                TextEntry::make('quantity')
-                                    ->label('Quantity'),
-                            ])
-                            ->columns(3)
-                    ]),
-                Section::make('Batch Items')
-                    ->schema([
-                        TextEntry::make('part_number_id')
-                            ->label('Part Number')
-                            ->formatStateUsing(fn ($record) => $record->partNumber?->part_number ?? '-'),
-                        TextEntry::make('batch_quantity')
-                            ->label('Quantity'),
-                    ])
-                    ->visible(fn ($record) => $record->part_number_id !== null)
-                    ->columns(2),
-            ]);
     }
 }
