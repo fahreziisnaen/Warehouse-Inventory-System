@@ -6,10 +6,8 @@ use App\Filament\Resources\OutboundRecordResource;
 use Filament\Resources\Pages\CreateRecord;
 use App\Models\Item;
 use App\Models\OutboundItem;
-use App\Models\BatchItem;
 use Filament\Notifications\Notification;
 use Filament\Notifications\Actions\Action;
-use Illuminate\Support\HtmlString;
 
 class CreateOutboundRecord extends CreateRecord
 {
