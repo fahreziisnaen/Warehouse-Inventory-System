@@ -7,7 +7,6 @@ use App\Models\OutboundRecord;
 use App\Models\Item;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use Filament\Support\Colors\Color;
 
 class StatsOverview extends BaseWidget
 {

@@ -14,8 +14,10 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Form;
 use Filament\Forms;
+use Filament\Forms\Get;
 
 class CreateInboundRecord extends CreateRecord
 {
@@ -282,7 +284,136 @@ class CreateInboundRecord extends CreateRecord
                         ->preload(),
                 ])
                 ->columns(2),
-            // ... rest of the schema
+
+            // Section untuk Item dengan Serial Number
+            Section::make('Items dengan Serial Number')
+                ->schema([
+                    Forms\Components\Repeater::make('inboundItems')
+                        ->schema([
+                            Select::make('brand_id')
+                                ->label('Brand')
+                                ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                ->reactive()
+                                ->createOptionForm([
+                                    TextInput::make('brand_name')
+                                        ->required()
+                                        ->unique('brands', 'brand_name')
+                                ])
+                                ->createOptionUsing(function (array $data) {
+                                    return \App\Models\Brand::create([
+                                        'brand_name' => $data['brand_name']
+                                    ])->brand_id;
+                                })
+                                ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
+
+                            Select::make('part_number_id')
+                                ->label('Part Number')
+                                ->options(function (callable $get) {
+                                    $brandId = $get('brand_id');
+                                    if (!$brandId) return [];
+                                    return \App\Models\PartNumber::where('brand_id', $brandId)
+                                        ->pluck('part_number', 'part_number_id');
+                                })
+                                ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                ->reactive()
+                                ->createOptionForm([
+                                    Select::make('brand_id')
+                                        ->label('Brand')
+                                        ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                        ->required(),
+                                    TextInput::make('part_number')
+                                        ->required()
+                                        ->unique('part_numbers', 'part_number'),
+                                    Textarea::make('description')
+                                        ->columnSpanFull(),
+                                ])
+                                ->createOptionUsing(function (array $data) {
+                                    return \App\Models\PartNumber::create([
+                                        'brand_id' => $data['brand_id'],
+                                        'part_number' => $data['part_number'],
+                                        'description' => $data['description'] ?? null,
+                                    ])->part_number_id;
+                                }),
+
+                            Textarea::make('bulk_serial_numbers')
+                                ->label('Serial Numbers')
+                                ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                ->helperText('Satu serial number per baris'),
+                        ])
+                        ->columns(3)
+                        ->defaultItems(0)
+                        ->addActionLabel('Tambah Item')
+                        ->reorderableWithButtons()
+                        ->collapsible()
+                        ->minItems(0)
+                        ->live(),
+                ]),
+
+            // Section untuk Batch Items
+            Section::make('Batch Items')
+                ->schema([
+                    Forms\Components\Repeater::make('batchItems')
+                        ->schema([
+                            Select::make('brand_id')
+                                ->label('Brand')
+                                ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                ->reactive()
+                                ->createOptionForm([
+                                    TextInput::make('brand_name')
+                                        ->required()
+                                        ->unique('brands', 'brand_name')
+                                ])
+                                ->createOptionUsing(function (array $data) {
+                                    return \App\Models\Brand::create([
+                                        'brand_name' => $data['brand_name']
+                                    ])->brand_id;
+                                })
+                                ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
+
+                            Select::make('part_number_id')
+                                ->label('Part Number')
+                                ->options(function (callable $get) {
+                                    $brandId = $get('brand_id');
+                                    if (!$brandId) return [];
+                                    return \App\Models\PartNumber::where('brand_id', $brandId)
+                                        ->pluck('part_number', 'part_number_id');
+                                })
+                                ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                ->reactive(),
+
+                            TextInput::make('batch_quantity')
+                                ->label('Jumlah')
+                                ->numeric()
+                                ->minValue(1)
+                                ->validationMessages([
+                                    'min' => 'Jumlah minimal 1',
+                                    'required' => 'Jumlah harus diisi',
+                                    'numeric' => 'Jumlah harus berupa angka'
+                                ]),
+
+                            Select::make('format_id')
+                                ->label('Satuan')
+                                ->options(fn () => \App\Models\UnitFormat::pluck('name', 'format_id'))
+                                ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                ->createOptionForm([
+                                    TextInput::make('name')
+                                        ->required()
+                                        ->unique('unit_formats', 'name')
+                                ])
+                                ->createOptionUsing(function (array $data) {
+                                    return \App\Models\UnitFormat::create([
+                                        'name' => $data['name']
+                                    ])->format_id;
+                                }),
+                        ])
+                        ->columns(4)
+                        ->defaultItems(0)
+                        ->addActionLabel('Tambah Batch Item')
+                        ->reorderableWithButtons()
+                        ->collapsible()
+                        ->minItems(0)
+                        ->live(),
+                ]),
         ]);
     }
 }

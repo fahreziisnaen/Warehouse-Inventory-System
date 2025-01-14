@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\InboundRecordResource\Pages;
-use App\Filament\Resources\InboundRecordResource\RelationManagers;
 use App\Models\InboundRecord;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -11,34 +10,15 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\Filter;
-use Filament\Infolists\Infolist;
-use Filament\Infolists\Components\TextEntry;
-use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Select;
-use Filament\Support\Enums\FontWeight;
 use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Textarea;
-use Illuminate\Support\HtmlString;
 use App\Models\Item;
-use Filament\Forms\Components\Radio;
-use Filament\Notifications\Notification;
-use Filament\Forms\Components\Action;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\BatchItem;
-use Filament\Resources\Pages\CreateRecord;
-use Filament\Infolists\Components\Grid;
-use Filament\Infolists\Components\Group;
-use Filament\Forms\Components\Actions\Action as DeleteAction;
-use Filament\Forms\Components\Component;
-use Filament\Forms\Components\Action as FormAction;
 
 class InboundRecordResource extends Resource
 {
