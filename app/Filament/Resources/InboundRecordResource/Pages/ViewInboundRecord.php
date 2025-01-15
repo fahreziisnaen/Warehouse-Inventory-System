@@ -11,7 +11,6 @@ use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Support\Enums\FontWeight;
 use Filament\Actions\Action;
 use App\Exports\InboundRecordExport;
-use Maatwebsite\Excel\Facades\Excel;
 use Filament\Notifications\Notification;
 
 class ViewInboundRecord extends ViewRecord
