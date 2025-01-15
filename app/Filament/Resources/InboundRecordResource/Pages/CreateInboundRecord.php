@@ -18,6 +18,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Form;
 use Filament\Forms;
 use Filament\Forms\Get;
+use Filament\Forms\Set;
 
 class CreateInboundRecord extends CreateRecord
 {
@@ -111,28 +112,11 @@ class CreateInboundRecord extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        if (isset($data['inboundItems'])) {
-            $validItems = [];
-            
-            foreach ($data['inboundItems'] as $item) {
-                if (!empty($item['brand_id']) && 
-                    !empty($item['part_number_id']) && 
-                    !empty($item['bulk_serial_numbers'])) {
-                    $validItems[] = [
-                        'brand_id' => $item['brand_id'],
-                        'part_number_id' => $item['part_number_id'],
-                        'bulk_serial_numbers' => $item['bulk_serial_numbers']
-                    ];
-                }
-            }
-            
-            if (!empty($validItems)) {
-                $data['inboundItems'] = $validItems;
-            } else {
-                unset($data['inboundItems']);
-            }
+        if ($data['lpb_type'] === 'new') {
+            $data['lpb_number'] = \App\Models\InboundRecord::generateLpbNumber();
         }
-
+        
+        unset($data['lpb_type']); // Hapus field yang tidak perlu disimpan
         return $data;
     }
 
@@ -252,10 +236,32 @@ class CreateInboundRecord extends CreateRecord
         return $form->schema([
             Section::make('Informasi Dasar')
                 ->schema([
-                    TextInput::make('lpb_number')
-                        ->label('No. LPB')
+                    Forms\Components\Radio::make('lpb_type')
+                        ->label('Tipe Nomor LPB')
+                        ->options([
+                            'new' => 'No LPB Baru',
+                            'custom' => 'No LPB Lama',
+                        ])
+                        ->default('new')
+                        ->inline()
+                        ->live()
+                        ->afterStateUpdated(function (Set $set, Get $get) {
+                            if ($get('lpb_type') === 'new') {
+                                $set('lpb_number', \App\Models\InboundRecord::generateLpbNumber());
+                            } else {
+                                $set('lpb_number', '');
+                            }
+                        }),
+
+                    Forms\Components\TextInput::make('lpb_number')
+                        ->label('Nomor LPB')
                         ->required()
-                        ->unique(),
+                        ->unique(ignoreRecord: true)
+                        ->disabled(fn (Get $get): bool => $get('lpb_type') === 'new')
+                        ->dehydrated()
+                        ->default(fn () => \App\Models\InboundRecord::generateLpbNumber())
+                        ->visible(fn (Get $get): bool => $get('lpb_type') !== null),
+
                     DatePicker::make('receive_date')
                         ->label('Tanggal Terima')
                         ->required(),

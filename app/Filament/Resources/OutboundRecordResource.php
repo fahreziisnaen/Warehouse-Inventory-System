@@ -39,12 +39,32 @@ class OutboundRecordResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Informasi Dasar')
                     ->schema([
+                        Forms\Components\Radio::make('lkb_type')
+                            ->label('Tipe Nomor LKB')
+                            ->options([
+                                'new' => 'No LKB Baru',
+                                'custom' => 'No LKB Lama',
+                            ])
+                            ->default('new')
+                            ->inline()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                if ($get('lkb_type') === 'new') {
+                                    $set('lkb_number', \App\Models\OutboundRecord::generateLkbNumber());
+                                } else {
+                                    $set('lkb_number', '');
+                                }
+                            }),
+
                         Forms\Components\TextInput::make('lkb_number')
                             ->label('Nomor LKB')
                             ->required()
                             ->maxLength(255)
                             ->unique(ignoreRecord: true)
-                            ->disabled(fn ($context) => $context === 'view'),
+                            ->disabled(fn (Get $get): bool => $get('lkb_type') === 'new')
+                            ->dehydrated()
+                            ->default(fn () => \App\Models\OutboundRecord::generateLkbNumber())
+                            ->visible(fn (Get $get): bool => $get('lkb_type') !== null),
                         Forms\Components\TextInput::make('delivery_note_number')
                             ->label('Nomor Surat Jalan')
                             ->nullable()

@@ -125,4 +125,26 @@ class OutboundRecord extends Model
                 ->delete();
         });
     }
+
+    public static function generateLkbNumber(): string
+    {
+        $currentMonth = now()->format('m');
+        $currentYear = now()->format('Y');
+        
+        // Cari nomor urut terakhir untuk tahun ini saja
+        $lastNumber = static::where('lkb_number', 'LIKE', "%-__.{$currentYear}-K")
+            ->orderByRaw('CAST(SUBSTRING_INDEX(lkb_number, "-", 1) AS UNSIGNED) DESC')
+            ->first();
+        
+        if ($lastNumber) {
+            // Ambil nomor urut terakhir dan tambah 1
+            $lastSequence = (int) explode('-', $lastNumber->lkb_number)[0];
+            $newSequence = $lastSequence + 1;
+        } else {
+            // Jika belum ada nomor untuk tahun ini, mulai dari 20 khusus untuk tahun 2025
+            $newSequence = ($currentYear === '2025') ? 20 : 1;
+        }
+        
+        return sprintf('%d-%s.%s-K', $newSequence, $currentMonth, $currentYear);
+    }
 } 
