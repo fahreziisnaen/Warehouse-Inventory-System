@@ -9,6 +9,10 @@ use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Support\Enums\FontWeight;
+use Filament\Actions\Action;
+use App\Exports\InboundRecordExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Filament\Notifications\Notification;
 
 class ViewInboundRecord extends ViewRecord
 {
@@ -90,6 +94,22 @@ class ViewInboundRecord extends ViewRecord
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            Action::make('print')
+                ->label('Print LPB')
+                ->icon('heroicon-o-printer')
+                ->action(function () {
+                    try {
+                        return (new InboundRecordExport($this->record))->download();
+                    } catch (\Exception $e) {
+                        \Log::error('Export error: ' . $e->getMessage());
+                        Notification::make()
+                            ->title('Export Error')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                })
+        ];
     }
 } 
