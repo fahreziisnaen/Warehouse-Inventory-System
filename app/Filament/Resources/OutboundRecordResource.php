@@ -67,24 +67,32 @@ class OutboundRecordResource extends Resource
                             ->label('Delivery Date')
                             ->required()
                             ->disabled(fn ($context) => $context === 'view'),
-                        Forms\Components\Select::make('vendor_id')
-                            ->options(function () {
-                                return \App\Models\Vendor::whereHas('vendorType', fn($q) => 
-                                        $q->where('type_name', 'Customer')
-                                )->pluck('vendor_name', 'vendor_id');
-                            })
-                            ->label('Customer')
-                            ->required()
-                            ->preload()
-                            ->searchable()
-                            ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('project_id')
                             ->options(fn () => \App\Models\Project::pluck('project_id', 'project_id'))
                             ->label('Project ID')
                             ->required()
                             ->preload()
                             ->searchable()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, $state) {
+                                if ($state) {
+                                    $project = \App\Models\Project::find($state);
+                                    if ($project) {
+                                        $set('vendor_id', $project->vendor_id);
+                                    }
+                                }
+                            })
                             ->disabled(fn ($context) => $context === 'view'),
+                        Forms\Components\Select::make('vendor_id')
+                            ->options(function () {
+                                return \App\Models\Vendor::whereHas('vendorType', fn($q) => 
+                                    $q->where('type_name', 'Customer')
+                                )->pluck('vendor_name', 'vendor_id');
+                            })
+                            ->label('Customer')
+                            ->required()
+                            ->disabled(true)
+                            ->dehydrated(),
                         Forms\Components\Select::make('purpose_id')
                             ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
                             ->label('Tujuan')
