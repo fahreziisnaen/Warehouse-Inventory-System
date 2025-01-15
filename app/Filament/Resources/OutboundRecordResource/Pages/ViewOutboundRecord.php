@@ -9,6 +9,9 @@ use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Support\Enums\FontWeight;
+use Filament\Actions\Action;
+use App\Exports\OutboundRecordExport;
+use Filament\Notifications\Notification;
 
 class ViewOutboundRecord extends ViewRecord
 {
@@ -22,6 +25,9 @@ class ViewOutboundRecord extends ViewRecord
                     ->schema([
                         TextEntry::make('lkb_number')
                             ->label('Nomor LKB')
+                            ->weight(FontWeight::Bold),
+                        TextEntry::make('delivery_note_number')
+                            ->label('Nomor Surat Jalan')
                             ->weight(FontWeight::Bold),
                         TextEntry::make('delivery_date')
                             ->label('Tanggal Keluar')
@@ -52,6 +58,11 @@ class ViewOutboundRecord extends ViewRecord
                                     ->label('Serial Number')
                                     ->url(fn ($record) => url("/admin/items/{$record->item->item_id}"))
                                     ->openUrlInNewTab(),
+                                TextEntry::make('inboundItem.inboundRecord.lpb_number')
+                                    ->label('Nomor LPB')
+                                    ->url(fn ($record) => $record->inboundItem ? 
+                                        url("/admin/inbound-records/{$record->inboundItem->inbound_id}") : null)
+                                    ->openUrlInNewTab(),
                                 TextEntry::make('item.status')
                                     ->label('Status')
                                     ->badge()
@@ -65,21 +76,50 @@ class ViewOutboundRecord extends ViewRecord
                                 TextEntry::make('quantity')
                                     ->label('Quantity'),
                             ])
-                            ->columns(5),
+                            ->columns(6),
                     ])
                     ->visible(fn ($record) => $record->outboundItems->count() > 0),
 
                 Section::make('Batch Items')
                     ->schema([
-                        TextEntry::make('partNumber.brand.brand_name')
-                            ->label('Brand'),
-                        TextEntry::make('partNumber.part_number')
-                            ->label('Tipe Perangkat'),
-                        TextEntry::make('batch_quantity')
-                            ->label('Quantity'),
+                        RepeatableEntry::make('batchItemHistories')
+                            ->schema([
+                                TextEntry::make('batchItem.partNumber.brand.brand_name')
+                                    ->label('Brand'),
+                                TextEntry::make('batchItem.partNumber.part_number')
+                                    ->label('Tipe Perangkat'),
+                                TextEntry::make('quantity')
+                                    ->label('Quantity'),
+                                TextEntry::make('batchItem.inboundHistories.first.recordable.lpb_number')
+                                    ->label('Nomor LPB')
+                                    ->url(fn ($record) => $record->batchItem->inboundHistories->first() ? 
+                                        url("/admin/inbound-records/{$record->batchItem->inboundHistories->first()->recordable->inbound_id}") : null)
+                                    ->openUrlInNewTab(),
+                            ])
+                            ->columns(4),
                     ])
-                    ->visible(fn ($record) => $record->part_number_id !== null)
-                    ->columns(3),
+                    ->visible(fn ($record) => $record->batchItemHistories->count() > 0),
             ]);
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('print')
+                ->label('Print LKB')
+                ->icon('heroicon-o-printer')
+                ->action(function () {
+                    try {
+                        return (new OutboundRecordExport($this->record))->download();
+                    } catch (\Exception $e) {
+                        \Log::error('Export error: ' . $e->getMessage());
+                        Notification::make()
+                            ->title('Export Error')
+                            ->body($e->getMessage())
+                            ->danger()
+                            ->send();
+                    }
+                })
+        ];
     }
 } 

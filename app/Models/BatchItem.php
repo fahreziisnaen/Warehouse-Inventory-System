@@ -40,6 +40,19 @@ class BatchItem extends Model
         return $this->belongsTo(UnitFormat::class, 'format_id', 'format_id');
     }
 
+    public function inboundHistories(): HasMany
+    {
+        return $this->hasMany(BatchItemHistory::class, 'batch_item_id')
+            ->where('type', 'inbound')
+            ->where('recordable_type', 'App\\Models\\InboundRecord')
+            ->orderByDesc(
+                \DB::raw("COALESCE(
+                    (SELECT receive_date FROM inbound_records WHERE inbound_id = recordable_id),
+                    created_at
+                )")
+            );
+    }
+
     public static function updateQuantity($partNumberId, $quantity, $type, $record = null)
     {
         $batchItem = self::where('part_number_id', $partNumberId)->first();

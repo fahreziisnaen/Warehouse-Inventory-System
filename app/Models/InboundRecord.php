@@ -18,9 +18,7 @@ class InboundRecord extends Model
         'part_number_id',
         'batch_quantity',
         'location',
-        'format_id',
-        'inboundItems',
-        'batchItems'
+        'format_id'
     ];
 
     protected $casts = [

@@ -12,6 +12,7 @@ class OutboundRecord extends Model
     
     protected $fillable = [
         'lkb_number',
+        'delivery_note_number',
         'delivery_date',
         'vendor_id',
         'project_id',
@@ -36,7 +37,8 @@ class OutboundRecord extends Model
 
     public function outboundItems(): HasMany
     {
-        return $this->hasMany(OutboundItem::class, 'outbound_id');
+        return $this->hasMany(OutboundItem::class, 'outbound_id')
+            ->with(['inboundItem.inboundRecord']);
     }
 
     public function purpose(): BelongsTo
@@ -46,7 +48,8 @@ class OutboundRecord extends Model
 
     public function batchItemHistories()
     {
-        return $this->morphMany(BatchItemHistory::class, 'recordable', 'recordable_type', 'recordable_id', 'outbound_id');
+        return $this->morphMany(BatchItemHistory::class, 'recordable', 'recordable_type', 'recordable_id', 'outbound_id')
+            ->with(['batchItem.inboundHistories.recordable']);
     }
 
     public function partNumber(): BelongsTo
