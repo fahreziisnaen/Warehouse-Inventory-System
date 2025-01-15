@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\OutboundItem;
 use Filament\Notifications\Notification;
 use Filament\Notifications\Actions\Action;
+use App\Models\BatchItem;
 
 class CreateOutboundRecord extends CreateRecord
 {
@@ -83,7 +84,7 @@ class CreateOutboundRecord extends CreateRecord
                         $purpose = $record->purpose;
                         $newStatus = match($purpose->name) {
                             'Sewa' => 'masa_sewa',
-                            'Pembelian' => 'terjual',
+                            'Non Sewa' => 'terjual',
                             'Peminjaman' => 'dipinjam',
                             default => $item->status
                         };
@@ -97,6 +98,22 @@ class CreateOutboundRecord extends CreateRecord
                         ]);
                     }
                 }
+            }
+        }
+
+        // Proses Batch Items
+        if (!empty($formData['batchItems'])) {
+            foreach ($formData['batchItems'] as $batchItem) {
+                if (empty($batchItem['part_number_id']) || empty($batchItem['batch_quantity'])) {
+                    continue;
+                }
+
+                BatchItem::updateQuantity(
+                    $batchItem['part_number_id'],
+                    -$batchItem['batch_quantity'],
+                    'outbound',
+                    $record
+                );
             }
         }
     }

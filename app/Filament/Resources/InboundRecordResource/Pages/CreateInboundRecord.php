@@ -379,7 +379,25 @@ class CreateInboundRecord extends CreateRecord
                                         ->pluck('part_number', 'part_number_id');
                                 })
                                 ->required(fn (Get $get): bool => filled($get('brand_id')))
-                                ->reactive(),
+                                ->reactive()
+                                ->createOptionForm([
+                                    Select::make('brand_id')
+                                        ->label('Brand')
+                                        ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                        ->required(),
+                                    TextInput::make('part_number')
+                                        ->required()
+                                        ->unique('part_numbers', 'part_number'),
+                                    Textarea::make('description')
+                                        ->columnSpanFull(),
+                                ])
+                                ->createOptionUsing(function (array $data) {
+                                    return \App\Models\PartNumber::create([
+                                        'brand_id' => $data['brand_id'],
+                                        'part_number' => $data['part_number'],
+                                        'description' => $data['description'] ?? null,
+                                    ])->part_number_id;
+                                }),
 
                             TextInput::make('batch_quantity')
                                 ->label('Jumlah')
@@ -412,7 +430,8 @@ class CreateInboundRecord extends CreateRecord
                         ->reorderableWithButtons()
                         ->collapsible()
                         ->minItems(0)
-                        ->live(),
+                        ->live()
+                        ->hiddenOn('edit'),
                 ]),
         ]);
     }

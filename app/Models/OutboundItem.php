@@ -24,4 +24,9 @@ class OutboundItem extends Model
     {
         return $this->belongsTo(OutboundRecord::class, 'outbound_id', 'outbound_id');
     }
+
+    public function inboundItem()
+    {
+        return $this->belongsTo(InboundItem::class, 'item_id', 'item_id');
+    }
 } 

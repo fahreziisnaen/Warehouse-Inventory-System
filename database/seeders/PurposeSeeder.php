@@ -11,7 +11,7 @@ class PurposeSeeder extends Seeder
     {
         $purposes = [
             ['name' => 'Sewa'],
-            ['name' => 'Pembelian'],
+            ['name' => 'Non Sewa'],
             ['name' => 'Peminjaman'],
         ];
 

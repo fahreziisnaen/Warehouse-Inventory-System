@@ -186,7 +186,7 @@ class EditOutboundRecord extends EditRecord
                     $purpose = $this->record->purpose;
                     $newStatus = match($purpose->name) {
                         'Sewa' => 'masa_sewa',
-                        'Pembelian' => 'terjual',
+                        'Non Sewa' => 'terjual',
                         'Peminjaman' => 'dipinjam',
                         default => $item->status
                     };

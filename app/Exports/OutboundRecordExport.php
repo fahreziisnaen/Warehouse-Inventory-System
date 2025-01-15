@@ -2,65 +2,73 @@
 
 namespace App\Exports;
 
-use App\Models\InboundRecord;
+use App\Models\OutboundRecord;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Maatwebsite\Excel\Concerns\Exportable;
 
-class InboundRecordExport
+class OutboundRecordExport
 {
     use Exportable;
 
-    protected $inboundRecord;
+    protected $outboundRecord;
     const ITEMS_PER_PAGE = 15;
     const TABLE_HEADER_ROW = 10;
     const ITEMS_START_ROW = 12;
     const TEMPLATE_ROW = 12;
     const COL_NO = 'B';
     const COL_PART_NO = 'C';
-    const COL_DESC_START = 'D';
-    const COL_DESC_END = 'E';
-    const COL_QTY = 'F';
-    const COL_BRAND_START = 'H';
-    const COL_BRAND_END = 'I';
-    const COL_SERIAL = 'J';
+    const COL_DESC = 'D';
+    const COL_QTY = 'E';
+    const COL_UNIT = 'F';
+    const COL_BRAND = 'G';
+    const COL_SERIAL = 'H';
+    const COL_LPB = 'I';
+    const COL_STATUS = 'J';
 
-    public function __construct(InboundRecord $inboundRecord)
+    public function __construct(OutboundRecord $outboundRecord)
     {
-        $this->inboundRecord = $inboundRecord;
+        $this->outboundRecord = $outboundRecord;
+    }
+
+    private function formatStatus(string $status): string
+    {
+        return match($status) {
+            'masa_sewa' => 'Sewa',
+            'terjual' => 'Non Sewa',
+            'dipinjam' => 'Peminjaman',
+            default => ucfirst($status)
+        };
     }
 
     public function download()
     {
         // Load template
-        $spreadsheet = IOFactory::load(storage_path('app/templates/lpb_template.xlsx'));
+        $spreadsheet = IOFactory::load(storage_path('app/templates/lkb_template.xlsx'));
         $sheet = $spreadsheet->getActiveSheet();
 
         // Replace placeholders
         $replacements = [
-            '[LPB_NUMBER]' => $this->inboundRecord->lpb_number,
-            '[RECEIVE_DATE]' => $this->inboundRecord->receive_date->format('d-m-Y'),
-            '[PO_NUMBER]' => $this->inboundRecord->purchaseOrder?->po_number ?? '-',
-            '[PO_DATE]' => $this->inboundRecord->purchaseOrder?->po_date?->format('d-m-Y') ?? '-',
-            '[VENDOR_NAME]' => $this->inboundRecord->project->vendor->vendor_name,
-            '[PROJECT_ID]' => $this->inboundRecord->project->project_id,
+            '[LKB_NUMBER]' => $this->outboundRecord->lkb_number,
+            '[PROJECT_NAME]' => $this->outboundRecord->project->project_name ?? '-',
+            '[PROJECT_ID]' => $this->outboundRecord->project->project_id ?? '-',
+            '[VENDOR_NAME]' => $this->outboundRecord->vendor->vendor_name ?? '-',
+            '[DELIVERY_DATE]' => $this->outboundRecord->delivery_date->format('d-m-Y'),
         ];
 
         $this->replaceInWorksheet($sheet, $replacements);
 
         // Process items
-        $currentRow = self::ITEMS_START_ROW; // Row 12
+        $currentRow = self::ITEMS_START_ROW;
         $rowNumber = 1;
 
         // Get items
-        $serialItems = $this->inboundRecord->validInboundItems()
-            ->with(['item.partNumber.brand'])
-            ->orderBy('inbound_item_id')
+        $serialItems = $this->outboundRecord->outboundItems()
+            ->with(['item.partNumber.brand', 'inboundItem.inboundRecord'])
             ->get();
 
         // Get batch items
-        $batchItems = $this->inboundRecord->batchItemHistories()
-            ->with(['batchItem.partNumber.brand', 'batchItem.unitFormat'])
-            ->orderBy('history_id')
+        $batchItems = $this->outboundRecord->batchItemHistories()
+            ->with(['batchItem.partNumber.brand', 'batchItem.inboundHistories.recordable'])
             ->get();
 
         // Kelompokkan Serial Items berdasarkan part number
@@ -82,23 +90,17 @@ class InboundRecordExport
             
             // Copy format dari row template ke baris baru
             for ($i = 13; $i < 13 + $totalRows - 1; $i++) {
-                // Copy row height
                 $sheet->getRowDimension($i)->setRowHeight(
                     $sheet->getRowDimension(12)->getRowHeight()
                 );
 
-                // Copy style sekali untuk seluruh range (ubah A-K menjadi A-J)
                 $sheet->duplicateStyle(
                     $sheet->getStyle('A12:J12'),
                     'A' . $i . ':J' . $i
                 );
-
-                // Merge cells yang diperlukan
-                $sheet->mergeCells('D' . $i . ':E' . $i);  // Description
-                $sheet->mergeCells('H' . $i . ':I' . $i);  // Brand
             }
 
-            // Apply borders untuk seluruh area data sekaligus (ubah A-K menjadi A-J)
+            // Apply borders
             $lastRow = 12 + $totalRows - 1;
             $sheet->getStyle('A12:J' . $lastRow)->applyFromArray([
                 'borders' => [
@@ -119,17 +121,21 @@ class InboundRecordExport
             // Row pertama dari part number
             $sheet->setCellValue(self::COL_NO . $currentRow, $rowNumber);
             $sheet->setCellValue(self::COL_PART_NO . $currentRow, $partNumber);
-            $sheet->setCellValue(self::COL_DESC_START . $currentRow, $firstItem->item->partNumber->description);
+            $sheet->setCellValue(self::COL_DESC . $currentRow, $firstItem->item->partNumber->description);
             $sheet->setCellValue(self::COL_QTY . $currentRow, $items->count());
-            $sheet->setCellValue('G' . $currentRow, 'Unit');
-            $sheet->setCellValue(self::COL_BRAND_START . $currentRow, $firstItem->item->partNumber->brand->brand_name);
+            $sheet->setCellValue(self::COL_UNIT . $currentRow, 'Unit');
+            $sheet->setCellValue(self::COL_BRAND . $currentRow, $firstItem->item->partNumber->brand->brand_name);
             $sheet->setCellValue(self::COL_SERIAL . $currentRow, $firstItem->item->serial_number);
+            $sheet->setCellValue(self::COL_LPB . $currentRow, $firstItem->inboundItem?->inboundRecord?->lpb_number ?? '-');
+            $sheet->setCellValue(self::COL_STATUS . $currentRow, $this->formatStatus($firstItem->item->status));
             
             $currentRow++;
 
             // Row berikutnya untuk serial number yang tersisa
             foreach ($items->skip(1) as $item) {
                 $sheet->setCellValue(self::COL_SERIAL . $currentRow, $item->item->serial_number);
+                $sheet->setCellValue(self::COL_LPB . $currentRow, $item->inboundItem?->inboundRecord?->lpb_number ?? '-');
+                $sheet->setCellValue(self::COL_STATUS . $currentRow, $this->formatStatus($item->item->status));
                 $currentRow++;
             }
 
@@ -142,12 +148,14 @@ class InboundRecordExport
             
             $sheet->setCellValue(self::COL_NO . $currentRow, $rowNumber);
             $sheet->setCellValue(self::COL_PART_NO . $currentRow, $partNumber);
-            $sheet->setCellValue(self::COL_DESC_START . $currentRow, $firstHistory->batchItem->partNumber->description);
-            $totalQuantity = $histories->sum('quantity');
+            $sheet->setCellValue(self::COL_DESC . $currentRow, $firstHistory->batchItem->partNumber->description);
+            $totalQuantity = abs($histories->sum('quantity'));
             $sheet->setCellValue(self::COL_QTY . $currentRow, $totalQuantity);
-            $sheet->setCellValue('G' . $currentRow, $firstHistory->batchItem->unitFormat->name);
-            $sheet->setCellValue(self::COL_BRAND_START . $currentRow, $firstHistory->batchItem->partNumber->brand->brand_name);
+            $sheet->setCellValue(self::COL_UNIT . $currentRow, $firstHistory->batchItem->unitFormat->name);
+            $sheet->setCellValue(self::COL_BRAND . $currentRow, $firstHistory->batchItem->partNumber->brand->brand_name);
             $sheet->setCellValue(self::COL_SERIAL . $currentRow, '-');
+            $sheet->setCellValue(self::COL_LPB . $currentRow, $firstHistory->batchItem->inboundHistories->first()?->recordable?->lpb_number ?? '-');
+            $sheet->setCellValue(self::COL_STATUS . $currentRow, 'Batch Item');
             
             $currentRow++;
             $rowNumber++;
@@ -155,7 +163,7 @@ class InboundRecordExport
 
         // Create writer and save
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        $filename = 'LPB_' . $this->inboundRecord->lpb_number . '.xlsx';
+        $filename = 'LKB_' . $this->outboundRecord->lkb_number . '.xlsx';
         $path = storage_path('app/public/' . $filename);
         $writer->save($path);
 
