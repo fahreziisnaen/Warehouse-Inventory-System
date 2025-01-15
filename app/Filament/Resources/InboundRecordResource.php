@@ -19,6 +19,8 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Textarea;
 use App\Models\Item;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Set;
 
 class InboundRecordResource extends Resource
 {
@@ -36,10 +38,32 @@ class InboundRecordResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Informasi Dasar')
                     ->schema([
-                        TextInput::make('lpb_number')
-                            ->label('No. LPB')
+                        Forms\Components\Radio::make('lpb_type')
+                            ->label('Tipe Nomor LPB')
+                            ->options([
+                                'new' => 'No LPB Baru',
+                                'custom' => 'No LPB Lama',
+                            ])
+                            ->default('new')
+                            ->inline()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, Get $get) {
+                                if ($get('lpb_type') === 'new') {
+                                    $set('lpb_number', \App\Models\InboundRecord::generateLpbNumber());
+                                } else {
+                                    $set('lpb_number', '');
+                                }
+                            }),
+
+                        Forms\Components\TextInput::make('lpb_number')
+                            ->label('Nomor LPB')
                             ->required()
-                            ->unique(ignoreRecord: true),
+                            ->unique(ignoreRecord: true)
+                            ->disabled(fn (Get $get): bool => $get('lpb_type') === 'new')
+                            ->dehydrated()
+                            ->default(fn () => \App\Models\InboundRecord::generateLpbNumber())
+                            ->visible(fn (Get $get): bool => $get('lpb_type') !== null),
+
                         DatePicker::make('receive_date')
                             ->label('Tanggal Terima')
                             ->required()

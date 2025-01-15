@@ -117,4 +117,14 @@ class CreateOutboundRecord extends CreateRecord
             }
         }
     }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        if ($data['lkb_type'] === 'new') {
+            $data['lkb_number'] = \App\Models\OutboundRecord::generateLkbNumber();
+        }
+        
+        unset($data['lkb_type']); // Hapus field yang tidak perlu disimpan
+        return $data;
+    }
 }
