@@ -47,8 +47,8 @@ class OutboundRecordResource extends Resource
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\TextInput::make('delivery_note_number')
                             ->label('Nomor Surat Jalan')
-                            ->required()
-                            ->unique(ignoreRecord: true),
+                            ->nullable()
+                            ->maxLength(255),
                         Forms\Components\DatePicker::make('delivery_date')
                             ->label('Delivery Date')
                             ->required()

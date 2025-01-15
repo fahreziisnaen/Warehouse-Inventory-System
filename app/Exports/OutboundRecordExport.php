@@ -18,12 +18,12 @@ class OutboundRecordExport
     const COL_NO = 'B';
     const COL_PART_NO = 'C';
     const COL_DESC = 'D';
-    const COL_QTY = 'E';
-    const COL_UNIT = 'F';
-    const COL_BRAND = 'G';
-    const COL_SERIAL = 'H';
-    const COL_LPB = 'I';
-    const COL_STATUS = 'J';
+    const COL_QTY = 'F';
+    const COL_UNIT = 'G';
+    const COL_BRAND = 'H';
+    const COL_SERIAL = 'I';
+    const COL_LPB = 'J';
+    const COL_STATUS = 'K';
 
     public function __construct(OutboundRecord $outboundRecord)
     {
@@ -53,6 +53,8 @@ class OutboundRecordExport
             '[PROJECT_ID]' => $this->outboundRecord->project->project_id ?? '-',
             '[VENDOR_NAME]' => $this->outboundRecord->vendor->vendor_name ?? '-',
             '[DELIVERY_DATE]' => $this->outboundRecord->delivery_date->format('d-m-Y'),
+            '[DELIVERY_NOTE]' => $this->outboundRecord->delivery_note_number ?? '-',
+            '[DELIVERY_NOTE_NUMBER]' => $this->outboundRecord->delivery_note_number ?? '-',
         ];
 
         $this->replaceInWorksheet($sheet, $replacements);
@@ -95,14 +97,16 @@ class OutboundRecordExport
                 );
 
                 $sheet->duplicateStyle(
-                    $sheet->getStyle('A12:J12'),
-                    'A' . $i . ':J' . $i
+                    $sheet->getStyle('A12:K12'),
+                    'A' . $i . ':K' . $i
                 );
+
+                $sheet->mergeCells('D' . $i . ':E' . $i);
             }
 
             // Apply borders
             $lastRow = 12 + $totalRows - 1;
-            $sheet->getStyle('A12:J' . $lastRow)->applyFromArray([
+            $sheet->getStyle('A12:K' . $lastRow)->applyFromArray([
                 'borders' => [
                     'allBorders' => [
                         'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,

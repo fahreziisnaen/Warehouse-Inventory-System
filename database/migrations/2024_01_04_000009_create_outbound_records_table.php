@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('outbound_records', function (Blueprint $table) {
             $table->id('outbound_id');
             $table->string('lkb_number')->unique();
+            $table->string('delivery_note_number')->nullable();
             $table->date('delivery_date');
             $table->foreignId('vendor_id')->constrained('vendors', 'vendor_id');
             $table->string('project_id');
