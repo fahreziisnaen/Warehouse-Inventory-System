@@ -10,6 +10,7 @@ class InboundItemObserver
     {
         if ($inboundItem->item) {
             $inboundItem->item->updateLatestStatus();
+            $inboundItem->item->update(['condition' => $inboundItem->condition]);
         }
     }
 } 

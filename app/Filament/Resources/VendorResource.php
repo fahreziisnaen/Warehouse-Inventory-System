@@ -42,7 +42,11 @@ class VendorResource extends Resource
                         Forms\Components\TextInput::make('vendor_name')
                             ->label('Nama Perusahaan')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->unique('vendors', 'vendor_name', ignoreRecord: true)
+                            ->validationMessages([
+                                'unique' => 'Nama Perusahaan sudah ada'
+                            ]),
                         Forms\Components\Textarea::make('address')
                             ->label('Alamat')
                             ->required()

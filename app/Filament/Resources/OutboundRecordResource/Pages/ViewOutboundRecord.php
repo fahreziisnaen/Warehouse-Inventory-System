@@ -43,6 +43,10 @@ class ViewOutboundRecord extends ViewRecord
                         TextEntry::make('purpose.name')
                             ->label('Tujuan')
                             ->badge(),
+                        TextEntry::make('note')
+                            ->label('Catatan')
+                            ->columnSpanFull()
+                            ->visible(fn ($record) => filled($record->note)),
                     ])
                     ->columns(2),
 

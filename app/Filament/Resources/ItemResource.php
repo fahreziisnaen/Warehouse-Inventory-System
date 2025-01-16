@@ -48,7 +48,7 @@ class ItemResource extends Resource
                         'diterima' => 'Diterima',
                         'dipinjam' => 'Dipinjam',
                         'disewa' => 'Disewa',
-                        'terjual' => 'Terjual',
+                        'non_sewa' => 'Non Sewa',
                         'unknown' => 'Unknown',
                     ])
                     ->required()
@@ -99,9 +99,16 @@ class ItemResource extends Resource
                     ->formatStateUsing(fn (string $state): string => ucfirst($state))
                     ->colors([
                         'info' => fn ($state) => $state === 'diterima',
-                        'danger' => fn ($state) => $state === 'terjual',
+                        'danger' => fn ($state) => $state === 'non_sewa',
                         'purple' => fn ($state) => $state === 'masa_sewa',
                         'secondary' => fn ($state) => $state === 'dipinjam',
+                    ]),
+                Tables\Columns\TextColumn::make('condition')
+                    ->label('Kondisi')
+                    ->badge()
+                    ->colors([
+                        'success' => fn ($state) => $state === 'Baru',
+                        'warning' => fn ($state) => $state === 'Bekas',
                     ]),
             ])
             ->filters([
@@ -154,7 +161,7 @@ class ItemResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return $record->status !== 'terjual';
+        return $record->status !== 'non_sewa';
     }
 
     public static function infolist(Infolist $infolist): Infolist
@@ -174,7 +181,7 @@ class ItemResource extends Resource
                             ->formatStateUsing(fn (string $state): string => ucfirst($state))
                             ->color(fn (string $state): string => match ($state) {
                                 'diterima' => 'info',
-                                'terjual' => 'danger',
+                                'non_sewa' => 'danger',
                                 'masa_sewa' => 'purple',
                                 'dipinjam' => 'secondary',
                                 default => 'gray',

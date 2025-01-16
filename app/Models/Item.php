@@ -13,21 +13,26 @@ class Item extends Model
     protected $fillable = [
         'serial_number',
         'status',
+        'condition',
         'part_number_id'
     ];
 
     protected $casts = [
         'manufacture_date' => 'date',
-        'status' => 'string'
+        'status' => 'string',
+        'condition' => 'string'
     ];
 
     protected $appends = ['status_label'];
 
     const STATUS_DITERIMA = 'diterima';
-    const STATUS_TERJUAL = 'terjual';
+    const STATUS_NON_SEWA = 'non_sewa';
     const STATUS_MASA_SEWA = 'masa_sewa';
     const STATUS_DIPINJAM = 'dipinjam';
     const STATUS_UNKNOWN = 'unknown';
+
+    const CONDITION_NEW = 'Baru';
+    const CONDITION_USED = 'Bekas';
 
     public static function getInitialStatuses(): array
     {
@@ -40,10 +45,18 @@ class Item extends Model
     {
         return [
             self::STATUS_DITERIMA => 'Diterima',
-            self::STATUS_TERJUAL => 'Terjual',
+            self::STATUS_NON_SEWA => 'Non Sewa',
             self::STATUS_MASA_SEWA => 'Masa Sewa',
             self::STATUS_DIPINJAM => 'Dipinjam',
             self::STATUS_UNKNOWN => 'Unknown',
+        ];
+    }
+
+    public static function getConditions(): array
+    {
+        return [
+            self::CONDITION_NEW => 'Baru',
+            self::CONDITION_USED => 'Bekas',
         ];
     }
 
@@ -71,16 +84,14 @@ class Item extends Model
     {
         // Ambil transaksi Inbound terbaru
         $latestInbound = $this->inboundItems()
-            ->whereHas('inboundRecord', function ($query) {
-                $query->orderBy('receive_date', 'desc');
-            })
+            ->join('inbound_records', 'inbound_items.inbound_id', '=', 'inbound_records.inbound_id')
+            ->orderBy('inbound_records.receive_date', 'desc')
             ->first();
 
         // Ambil transaksi Outbound terbaru
         $latestOutbound = $this->outboundItems()
-            ->whereHas('outboundRecord', function ($query) {
-                $query->orderBy('delivery_date', 'desc');
-            })
+            ->join('outbound_records', 'outbound_items.outbound_id', '=', 'outbound_records.outbound_id')
+            ->orderBy('outbound_records.delivery_date', 'desc')
             ->first();
 
         // Bandingkan tanggal
@@ -115,7 +126,7 @@ class Item extends Model
         $purpose = $outboundItem->outboundRecord->purpose->name;
         $newStatus = match($purpose) {
             'Sewa' => 'masa_sewa',
-            'Pembelian' => 'terjual',
+            'Non Sewa' => 'non_sewa',
             'Peminjaman' => 'dipinjam',
             default => $this->status
         };

@@ -34,7 +34,7 @@ class OutboundRecordExport
     {
         return match($status) {
             'masa_sewa' => 'Sewa',
-            'terjual' => 'Non Sewa',
+            'non_sewa' => 'Non Sewa',
             'dipinjam' => 'Peminjaman',
             default => ucfirst($status)
         };
@@ -55,6 +55,7 @@ class OutboundRecordExport
             '[DELIVERY_DATE]' => $this->outboundRecord->delivery_date->format('d-m-Y'),
             '[DELIVERY_NOTE]' => $this->outboundRecord->delivery_note_number ?? '-',
             '[DELIVERY_NOTE_NUMBER]' => $this->outboundRecord->delivery_note_number ?? '-',
+            '[NOTE]' => $this->outboundRecord->note ?? '-',
         ];
 
         $this->replaceInWorksheet($sheet, $replacements);

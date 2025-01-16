@@ -12,9 +12,14 @@ return new class extends Migration
             $table->id('inbound_id');
             $table->string('lpb_number')->unique();
             $table->date('receive_date');
-            $table->foreignId('po_id')->constrained('purchase_orders', 'po_id');
+            $table->foreignId('po_id')->nullable()->constrained('purchase_orders', 'po_id');
             $table->string('project_id');
             $table->foreign('project_id')->references('project_id')->on('projects');
+            $table->foreignId('part_number_id')->nullable()->constrained('part_numbers', 'part_number_id');
+            $table->integer('batch_quantity')->nullable();
+            $table->foreignId('format_id')->nullable()->constrained('unit_formats', 'format_id');
+            $table->enum('location', ['Gudang Jakarta', 'Gudang Surabaya']);
+            $table->text('note')->nullable();
             $table->timestamps();
         });
     }

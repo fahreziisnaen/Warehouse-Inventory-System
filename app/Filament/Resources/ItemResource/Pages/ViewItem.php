@@ -36,9 +36,17 @@ class ViewItem extends ViewRecord
                                 'baru' => 'success',
                                 'bekas' => 'warning',
                                 'diterima' => 'info',
-                                'terjual' => 'danger',
+                                'non_sewa' => 'danger',
                                 'masa_sewa' => 'purple',
                                 'dipinjam' => 'secondary',
+                                default => 'gray',
+                            }),
+                        TextEntry::make('condition')
+                            ->label('Kondisi')
+                            ->badge()
+                            ->color(fn (string $state): string => match ($state) {
+                                'Baru' => 'success',
+                                'Bekas' => 'warning',
                                 default => 'gray',
                             }),
                     ])

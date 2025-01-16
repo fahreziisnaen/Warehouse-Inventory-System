@@ -12,6 +12,7 @@ class InboundItem extends Model
     protected $fillable = [
         'inbound_id',
         'item_id',
+        'condition',
         'quantity'
     ];
 

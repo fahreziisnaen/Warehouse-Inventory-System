@@ -18,7 +18,8 @@ class OutboundRecord extends Model
         'project_id',
         'purpose_id',
         'part_number_id',
-        'batch_quantity'
+        'batch_quantity',
+        'note'
     ];
 
     protected $casts = [
@@ -131,8 +132,16 @@ class OutboundRecord extends Model
         $currentMonth = now()->format('m');
         $currentYear = now()->format('Y');
         
-        // Cari nomor urut terakhir untuk tahun ini saja
-        $lastNumber = static::where('lkb_number', 'LIKE', "%-__.{$currentYear}-K")
+        // Ambil lokasi dari form request
+        $location = request('location', 'Gudang Jakarta');
+        $locationCode = match($location) {
+            'Gudang Surabaya' => 'SBY',
+            'Gudang Jakarta' => 'JKT',
+            default => 'JKT'
+        };
+        
+        // Cari nomor urut terakhir untuk tahun dan lokasi yang sama
+        $lastNumber = static::where('lkb_number', 'LIKE', "%-{$currentMonth}.{$currentYear}-{$locationCode}-K")
             ->orderByRaw('CAST(SUBSTRING_INDEX(lkb_number, "-", 1) AS UNSIGNED) DESC')
             ->first();
         
@@ -141,10 +150,13 @@ class OutboundRecord extends Model
             $lastSequence = (int) explode('-', $lastNumber->lkb_number)[0];
             $newSequence = $lastSequence + 1;
         } else {
-            // Jika belum ada nomor untuk tahun ini, mulai dari 20 khusus untuk tahun 2025
-            $newSequence = ($currentYear === '2025') ? 20 : 1;
+            // Jika belum ada nomor untuk tahun ini, mulai dari 1
+            $newSequence = 1;
         }
         
-        return sprintf('%d-%s.%s-K', $newSequence, $currentMonth, $currentYear);
+        // Format nomor dengan padding 2 digit (01, 02, dst)
+        $paddedSequence = str_pad($newSequence, 2, '0', STR_PAD_LEFT);
+        
+        return sprintf('%s-%s.%s-%s-K', $paddedSequence, $currentMonth, $currentYear, $locationCode);
     }
 } 

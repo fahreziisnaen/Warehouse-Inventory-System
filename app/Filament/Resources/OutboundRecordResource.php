@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\Filter;
 use App\Models\BatchItem;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
 
@@ -33,7 +35,7 @@ class OutboundRecordResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Informasi Dasar')
                     ->schema([
-                        Forms\Components\Radio::make('lkb_type')
+                        Radio::make('lkb_type')
                             ->label('Tipe Nomor LKB')
                             ->options([
                                 'new' => 'No LKB Baru',
@@ -41,12 +43,20 @@ class OutboundRecordResource extends Resource
                             ])
                             ->default('new')
                             ->inline()
+                            ->live(),
+
+                        Select::make('location')
+                            ->label('Lokasi')
+                            ->options([
+                                'Gudang Jakarta' => 'Gudang Jakarta',
+                                'Gudang Surabaya' => 'Gudang Surabaya',
+                            ])
+                            ->required()
                             ->live()
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 if ($get('lkb_type') === 'new') {
+                                    request()->merge(['location' => $get('location')]);
                                     $set('lkb_number', \App\Models\OutboundRecord::generateLkbNumber());
-                                } else {
-                                    $set('lkb_number', '');
                                 }
                             }),
 
@@ -57,8 +67,10 @@ class OutboundRecordResource extends Resource
                             ->unique(ignoreRecord: true)
                             ->disabled(fn (Get $get): bool => $get('lkb_type') === 'new')
                             ->dehydrated()
-                            ->default(fn () => \App\Models\OutboundRecord::generateLkbNumber())
-                            ->visible(fn (Get $get): bool => $get('lkb_type') !== null),
+                            ->visible(fn (Get $get): bool => 
+                                $get('lkb_type') !== null && 
+                                filled($get('location'))
+                            ),
                         Forms\Components\TextInput::make('delivery_note_number')
                             ->label('Nomor Surat Jalan')
                             ->nullable()
@@ -84,11 +96,7 @@ class OutboundRecordResource extends Resource
                             })
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('vendor_id')
-                            ->options(function () {
-                                return \App\Models\Vendor::whereHas('vendorType', fn($q) => 
-                                    $q->where('type_name', 'Customer')
-                                )->pluck('vendor_name', 'vendor_id');
-                            })
+                            ->options(fn () => \App\Models\Vendor::pluck('vendor_name', 'vendor_id'))
                             ->label('Customer')
                             ->required()
                             ->disabled(true)
@@ -100,6 +108,10 @@ class OutboundRecordResource extends Resource
                             ->preload()
                             ->searchable()
                             ->disabled(fn ($context) => $context === 'view'),
+                        Forms\Components\Textarea::make('note')
+                            ->label('Catatan')
+                            ->nullable()
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Items')

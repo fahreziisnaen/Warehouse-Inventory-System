@@ -13,7 +13,7 @@ return new class extends Migration
             $table->foreignId('batch_item_id')->constrained('batch_items', 'batch_item_id');
             $table->enum('type', ['inbound', 'outbound']);
             $table->integer('quantity');
-            $table->morphs('recordable'); // Untuk InboundRecord atau OutboundRecord
+            $table->nullableMorphs('recordable');
             $table->timestamps();
         });
     }

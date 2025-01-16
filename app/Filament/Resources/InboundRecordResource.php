@@ -45,12 +45,20 @@ class InboundRecordResource extends Resource
                             ])
                             ->default('new')
                             ->inline()
+                            ->live(),
+
+                        Select::make('location')
+                            ->label('Lokasi')
+                            ->options([
+                                'Gudang Jakarta' => 'Gudang Jakarta',
+                                'Gudang Surabaya' => 'Gudang Surabaya',
+                            ])
+                            ->required()
                             ->live()
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 if ($get('lpb_type') === 'new') {
+                                    request()->merge(['location' => $get('location')]);
                                     $set('lpb_number', \App\Models\InboundRecord::generateLpbNumber());
-                                } else {
-                                    $set('lpb_number', '');
                                 }
                             }),
 
@@ -60,20 +68,19 @@ class InboundRecordResource extends Resource
                             ->unique(ignoreRecord: true)
                             ->disabled(fn (Get $get): bool => $get('lpb_type') === 'new')
                             ->dehydrated()
-                            ->default(fn () => \App\Models\InboundRecord::generateLpbNumber())
-                            ->visible(fn (Get $get): bool => $get('lpb_type') !== null),
+                            ->visible(fn (Get $get): bool => 
+                                $get('lpb_type') !== null && 
+                                filled($get('location'))
+                            ),
 
                         DatePicker::make('receive_date')
                             ->label('Tanggal Terima')
                             ->required()
                             ->default(now()),
-                        Select::make('location')
-                            ->label('Lokasi')
-                            ->options([
-                                'Gudang Jakarta' => 'Gudang Jakarta',
-                                'Gudang Surabaya' => 'Gudang Surabaya',
-                            ])
-                            ->required(),
+                        Forms\Components\Textarea::make('note')
+                            ->label('Catatan')
+                            ->nullable()
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
@@ -143,9 +150,17 @@ class InboundRecordResource extends Resource
                                         ])->part_number_id;
                                     }),
 
+                                Select::make('condition')
+                                    ->label('Kondisi')
+                                    ->options([
+                                        'Baru' => 'Baru',
+                                        'Bekas' => 'Bekas',
+                                    ])
+                                    ->required(),
+
                                 Textarea::make('bulk_serial_numbers')
                                     ->label('Serial Numbers')
-                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->required()
                                     ->helperText('Satu serial number per baris'),
                             ])
                             ->columns(3)
@@ -371,7 +386,8 @@ class InboundRecordResource extends Resource
                         $newItem = Item::create([
                             'part_number_id' => $itemData['part_number_id'],
                             'serial_number' => $serialNumber,
-                            'status' => 'diterima'
+                            'status' => 'diterima',
+                            'condition' => $itemData['condition'],
                         ]);
                         
                         if ($newItem && $newItem->item_id) {

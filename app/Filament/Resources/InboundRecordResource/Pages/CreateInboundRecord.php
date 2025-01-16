@@ -50,7 +50,7 @@ class CreateInboundRecord extends CreateRecord
                         if ($existingItem) {
                             if ($existingItem->status === 'diterima') {
                                 $invalidSerials[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> masih berada di Gudang";
-                            } elseif (!in_array($existingItem->status, ['disewa', 'dipinjam', 'terjual', 'unknown'])) {
+                            } elseif (!in_array($existingItem->status, ['masa_sewa', 'dipinjam', 'terjual', 'unknown'])) {
                                 $invalidSerials[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> memiliki status yang tidak valid";
                             } else {
                                 $hasItems = true;
@@ -156,12 +156,12 @@ class CreateInboundRecord extends CreateRecord
                                 continue;
                             }
 
-                            // Hanya proses jika status adalah disewa/dipinjam/terjual
-                            if (in_array($existingItem->status, ['disewa', 'dipinjam', 'terjual'])) {
-                                $existingItem->update(['status' => 'diterima']);
+                            // Hanya proses jika status adalah masa_sewa/dipinjam/terjual
+                            if (in_array($existingItem->status, ['masa_sewa', 'dipinjam', 'non_sewa'])) {
                                 InboundItem::create([
                                     'inbound_id' => $record->inbound_id,
                                     'item_id' => $existingItem->item_id,
+                                    'condition' => $itemData['condition'],
                                     'quantity' => 1
                                 ]);
                             } else {
@@ -176,7 +176,8 @@ class CreateInboundRecord extends CreateRecord
                             $newItem = Item::create([
                                 'part_number_id' => $itemData['part_number_id'],
                                 'serial_number' => $serialNumber,
-                                'status' => 'diterima'
+                                'status' => 'diterima',
+                                'condition' => $itemData['condition']
                             ]);
 
                             if ($newItem) {
@@ -244,12 +245,20 @@ class CreateInboundRecord extends CreateRecord
                         ])
                         ->default('new')
                         ->inline()
+                        ->live(),
+
+                    Select::make('location')
+                        ->label('Lokasi')
+                        ->options([
+                            'Gudang Jakarta' => 'Gudang Jakarta',
+                            'Gudang Surabaya' => 'Gudang Surabaya',
+                        ])
+                        ->required()
                         ->live()
                         ->afterStateUpdated(function (Set $set, Get $get) {
                             if ($get('lpb_type') === 'new') {
+                                request()->merge(['location' => $get('location')]);
                                 $set('lpb_number', \App\Models\InboundRecord::generateLpbNumber());
-                            } else {
-                                $set('lpb_number', '');
                             }
                         }),
 
@@ -259,19 +268,18 @@ class CreateInboundRecord extends CreateRecord
                         ->unique(ignoreRecord: true)
                         ->disabled(fn (Get $get): bool => $get('lpb_type') === 'new')
                         ->dehydrated()
-                        ->default(fn () => \App\Models\InboundRecord::generateLpbNumber())
-                        ->visible(fn (Get $get): bool => $get('lpb_type') !== null),
+                        ->visible(fn (Get $get): bool => 
+                            $get('lpb_type') !== null && 
+                            filled($get('location'))
+                        ),
 
                     DatePicker::make('receive_date')
                         ->label('Tanggal Terima')
                         ->required(),
-                    Select::make('location')
-                        ->label('Lokasi')
-                        ->options([
-                            'Gudang Jakarta' => 'Gudang Jakarta',
-                            'Gudang Surabaya' => 'Gudang Surabaya',
-                        ])
-                        ->required(),
+                    Forms\Components\Textarea::make('note')
+                        ->label('Catatan')
+                        ->nullable()
+                        ->columnSpanFull(),
                 ])
                 ->columns(2),
 
@@ -320,7 +328,7 @@ class CreateInboundRecord extends CreateRecord
                                     return \App\Models\PartNumber::where('brand_id', $brandId)
                                         ->pluck('part_number', 'part_number_id');
                                 })
-                                ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                ->required()
                                 ->reactive()
                                 ->createOptionForm([
                                     Select::make('brand_id')
@@ -341,12 +349,17 @@ class CreateInboundRecord extends CreateRecord
                                     ])->part_number_id;
                                 }),
 
+                            Select::make('condition')
+                                ->label('Kondisi')
+                                ->options(fn () => \App\Models\Item::getConditions())
+                                ->required(),
+
                             Textarea::make('bulk_serial_numbers')
                                 ->label('Serial Numbers')
-                                ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                ->required()
                                 ->helperText('Satu serial number per baris'),
                         ])
-                        ->columns(3)
+                        ->columns(4)
                         ->defaultItems(0)
                         ->addActionLabel('Tambah Item')
                         ->reorderableWithButtons()
@@ -384,7 +397,7 @@ class CreateInboundRecord extends CreateRecord
                                     return \App\Models\PartNumber::where('brand_id', $brandId)
                                         ->pluck('part_number', 'part_number_id');
                                 })
-                                ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                ->required()
                                 ->reactive()
                                 ->createOptionForm([
                                     Select::make('brand_id')

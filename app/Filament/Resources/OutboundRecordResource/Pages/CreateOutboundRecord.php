@@ -84,7 +84,7 @@ class CreateOutboundRecord extends CreateRecord
                         $purpose = $record->purpose;
                         $newStatus = match($purpose->name) {
                             'Sewa' => 'masa_sewa',
-                            'Non Sewa' => 'terjual',
+                            'Non Sewa' => 'non_sewa',
                             'Peminjaman' => 'dipinjam',
                             default => $item->status
                         };
@@ -124,7 +124,7 @@ class CreateOutboundRecord extends CreateRecord
             $data['lkb_number'] = \App\Models\OutboundRecord::generateLkbNumber();
         }
         
-        unset($data['lkb_type']); // Hapus field yang tidak perlu disimpan
+        unset($data['lkb_type']);
         return $data;
     }
 }

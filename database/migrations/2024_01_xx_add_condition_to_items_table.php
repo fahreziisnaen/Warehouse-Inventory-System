@@ -8,15 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('inbound_records', function (Blueprint $table) {
-            $table->foreignId('po_id')->nullable()->change();
+        Schema::table('items', function (Blueprint $table) {
+            $table->enum('condition', ['Baru', 'Bekas'])->after('status');
         });
     }
 
     public function down(): void
     {
-        Schema::table('inbound_records', function (Blueprint $table) {
-            $table->foreignId('po_id')->nullable(false)->change();
+        Schema::table('items', function (Blueprint $table) {
+            $table->dropColumn('condition');
         });
     }
 }; 

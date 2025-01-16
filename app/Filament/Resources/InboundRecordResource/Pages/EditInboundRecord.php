@@ -318,6 +318,7 @@ class EditInboundRecord extends EditRecord
                                         'serial_number' => $item->item->serial_number ?? '-',
                                         'quantity' => $item->quantity,
                                         'status' => $item->item->status ?? '-',
+                                        'condition' => $item->item->condition ?? '-',
                                     ];
                                 }),
                             'record' => $this->record,

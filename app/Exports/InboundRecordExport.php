@@ -43,6 +43,7 @@ class InboundRecordExport
             '[PO_DATE]' => $this->inboundRecord->purchaseOrder?->po_date?->format('d-m-Y') ?? '-',
             '[VENDOR_NAME]' => $this->inboundRecord->project->vendor->vendor_name,
             '[PROJECT_ID]' => $this->inboundRecord->project->project_id,
+            '[NOTE]' => $this->inboundRecord->note ?? '-',
         ];
 
         $this->replaceInWorksheet($sheet, $replacements);
