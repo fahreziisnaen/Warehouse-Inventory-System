@@ -55,8 +55,7 @@ class OutboundRecordResource extends Resource
                             ->live()
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 if ($get('lkb_type') === 'new') {
-                                    request()->merge(['location' => $get('location')]);
-                                    $set('lkb_number', \App\Models\OutboundRecord::generateLkbNumber());
+                                    $set('lkb_number', \App\Models\OutboundRecord::generateLkbNumber($get('location')));
                                 }
                             }),
 
@@ -80,34 +79,35 @@ class OutboundRecordResource extends Resource
                             ->required()
                             ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('project_id')
-                            ->options(fn () => \App\Models\Project::pluck('project_id', 'project_id'))
+                            ->relationship('project', 'project_id')
                             ->label('Project ID')
-                            ->required()
-                            ->preload()
                             ->searchable()
+                            ->preload()
                             ->live()
                             ->afterStateUpdated(function (Set $set, $state) {
                                 if ($state) {
                                     $project = \App\Models\Project::find($state);
                                     if ($project) {
-                                        $set('vendor_id', $project->vendor_id);
+                                        // Hanya set vendor jika belum ada vendor yang dipilih
+                                        $set('default_vendor_id', $project->vendor_id);
                                     }
                                 }
-                            })
-                            ->disabled(fn ($context) => $context === 'view'),
+                            }),
                         Forms\Components\Select::make('vendor_id')
-                            ->options(fn () => \App\Models\Vendor::pluck('vendor_name', 'vendor_id'))
-                            ->label('Customer')
+                            ->relationship(
+                                'vendor', 
+                                'vendor_name',
+                                fn ($query) => $query->whereHas('vendorType')
+                            )
+                            ->label(fn (Get $get): string => 
+                                \App\Models\Vendor::find($get('vendor_id'))?->vendorType?->type_name ?? 'Customer/Supplier'
+                            )
+                            ->default(fn (Get $get) => $get('default_vendor_id'))
                             ->required()
-                            ->disabled(true)
-                            ->dehydrated(),
-                        Forms\Components\Select::make('purpose_id')
-                            ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
-                            ->label('Tujuan')
-                            ->required()
-                            ->preload()
                             ->searchable()
-                            ->disabled(fn ($context) => $context === 'view'),
+                            ->preload()
+                            ->live(),
+                        Forms\Components\Hidden::make('default_vendor_id'),
                         Forms\Components\Textarea::make('note')
                             ->label('Catatan')
                             ->nullable()
@@ -140,31 +140,18 @@ class OutboundRecordResource extends Resource
                                     ->disabled(fn (Get $get): bool => !filled($get('brand_id')))
                                     ->reactive(),
 
+                                Forms\Components\Select::make('purpose_id')
+                                    ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
+                                    ->label('Tujuan')
+                                    ->required()
+                                    ->searchable()
+                                    ->preload(),
+
                                 Forms\Components\Textarea::make('bulk_serial_numbers')
                                     ->label('Serial Numbers')
                                     ->required(fn (Get $get): bool => filled($get('brand_id')))
                                     ->disabled(fn (Get $get): bool => !filled($get('part_number_id')))
-                                    ->helperText('Satu serial number per baris')
-                                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                                        if (!$state || !$get('brand_id')) return;
-                                        
-                                        $serialNumbers = array_filter(
-                                            explode("\n", str_replace("\r", "", $state))
-                                        );
-                                        $serialNumbers = array_map('trim', $serialNumbers);
-                                        
-                                        foreach ($serialNumbers as $serialNumber) {
-                                            $item = \App\Models\Item::where('serial_number', $serialNumber)
-                                                ->whereIn('status', ['diterima', 'unknown'])
-                                                ->first();
-                                            
-                                            if (!$item) {
-                                                $set('validation_error', "Serial Number {$serialNumber} tidak valid atau tidak tersedia");
-                                                return;
-                                            }
-                                        }
-                                        $set('validation_error', null);
-                                    }),
+                                    ->helperText('Satu serial number per baris'),
 
                                 TextInput::make('validation_error')
                                     ->label('Status')
@@ -173,7 +160,7 @@ class OutboundRecordResource extends Resource
                                     ->visible(fn ($get) => !empty($get('validation_error')))
                                     ->extraAttributes(['class' => 'text-red-500']),
                             ])
-                            ->columns(3)
+                            ->columns(4)
                             ->defaultItems(0)
                             ->addActionLabel('Tambah Item')
                             ->reorderableWithButtons()

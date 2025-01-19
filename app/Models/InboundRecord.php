@@ -70,13 +70,11 @@ class InboundRecord extends Model
         return $this->belongsTo(UnitFormat::class, 'format_id');
     }
 
-    public static function generateLpbNumber(): string
+    public static function generateLpbNumber(string $location): string
     {
         $currentMonth = now()->format('m');
         $currentYear = now()->format('Y');
         
-        // Ambil lokasi dari form request
-        $location = request('location', 'Gudang Jakarta');
         $locationCode = match($location) {
             'Gudang Surabaya' => 'SBY',
             'Gudang Jakarta' => 'JKT',

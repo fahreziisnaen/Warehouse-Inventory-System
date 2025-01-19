@@ -12,7 +12,8 @@ class OutboundItem extends Model
     protected $fillable = [
         'outbound_id',
         'item_id',
-        'quantity'
+        'quantity',
+        'purpose_id'
     ];
 
     public function item(): BelongsTo
@@ -28,5 +29,10 @@ class OutboundItem extends Model
     public function inboundItem()
     {
         return $this->belongsTo(InboundItem::class, 'item_id', 'item_id');
+    }
+
+    public function purpose(): BelongsTo
+    {
+        return $this->belongsTo(Purpose::class, 'purpose_id', 'purpose_id');
     }
 } 

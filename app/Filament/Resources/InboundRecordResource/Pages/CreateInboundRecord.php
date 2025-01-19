@@ -113,10 +113,10 @@ class CreateInboundRecord extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         if ($data['lpb_type'] === 'new') {
-            $data['lpb_number'] = \App\Models\InboundRecord::generateLpbNumber();
+            $data['lpb_number'] = \App\Models\InboundRecord::generateLpbNumber($data['location']);
         }
         
-        unset($data['lpb_type']); // Hapus field yang tidak perlu disimpan
+        unset($data['lpb_type']);
         return $data;
     }
 
@@ -257,8 +257,7 @@ class CreateInboundRecord extends CreateRecord
                         ->live()
                         ->afterStateUpdated(function (Set $set, Get $get) {
                             if ($get('lpb_type') === 'new') {
-                                request()->merge(['location' => $get('location')]);
-                                $set('lpb_number', \App\Models\InboundRecord::generateLpbNumber());
+                                $set('lpb_number', \App\Models\InboundRecord::generateLpbNumber($get('location')));
                             }
                         }),
 

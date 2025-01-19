@@ -63,7 +63,8 @@ class CreateOutboundRecord extends CreateRecord
             foreach ($formData['outboundItems'] as $itemData) {
                 if (empty($itemData['brand_id']) || 
                     empty($itemData['part_number_id']) || 
-                    empty($itemData['bulk_serial_numbers'])) {
+                    empty($itemData['bulk_serial_numbers']) ||
+                    empty($itemData['purpose_id'])) {
                     continue;
                 }
 
@@ -80,9 +81,15 @@ class CreateOutboundRecord extends CreateRecord
                         ->first();
 
                     if ($item) {
+                        $outboundItem = OutboundItem::create([
+                            'outbound_id' => $record->outbound_id,
+                            'item_id' => $item->item_id,
+                            'quantity' => 1,
+                            'purpose_id' => $itemData['purpose_id']
+                        ]);
+
                         // Update status berdasarkan purpose
-                        $purpose = $record->purpose;
-                        $newStatus = match($purpose->name) {
+                        $newStatus = match($outboundItem->purpose->name) {
                             'Sewa' => 'masa_sewa',
                             'Non Sewa' => 'non_sewa',
                             'Peminjaman' => 'dipinjam',
@@ -90,12 +97,6 @@ class CreateOutboundRecord extends CreateRecord
                         };
                         
                         $item->update(['status' => $newStatus]);
-                        
-                        OutboundItem::create([
-                            'outbound_id' => $record->outbound_id,
-                            'item_id' => $item->item_id,
-                            'quantity' => 1
-                        ]);
                     }
                 }
             }
@@ -121,7 +122,7 @@ class CreateOutboundRecord extends CreateRecord
     protected function mutateFormDataBeforeCreate(array $data): array
     {
         if ($data['lkb_type'] === 'new') {
-            $data['lkb_number'] = \App\Models\OutboundRecord::generateLkbNumber();
+            $data['lkb_number'] = \App\Models\OutboundRecord::generateLkbNumber($data['location']);
         }
         
         unset($data['lkb_type']);

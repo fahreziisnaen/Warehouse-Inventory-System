@@ -48,6 +48,13 @@ class EditOutboundRecord extends EditRecord
                         ->label('Serial Numbers')
                         ->required()
                         ->helperText('Satu serial number per baris'),
+
+                    Forms\Components\Select::make('purpose_id')
+                        ->relationship('purpose', 'name')
+                        ->label('Tujuan')
+                        ->required()
+                        ->searchable()
+                        ->preload(),
                 ]),
 
             Action::make('addBatchItem')
@@ -110,12 +117,6 @@ class EditOutboundRecord extends EditRecord
                     Forms\Components\Select::make('project_id')
                         ->relationship('project', 'project_id')
                         ->label('Project ID')
-                        ->required()
-                        ->searchable()
-                        ->preload(),
-                    Forms\Components\Select::make('purpose_id')
-                        ->relationship('purpose', 'name')
-                        ->label('Tujuan')
                         ->required()
                         ->searchable()
                         ->preload(),
@@ -182,9 +183,19 @@ class EditOutboundRecord extends EditRecord
                     ->first();
 
                 if ($item) {
-                    // Update status berdasarkan purpose
-                    $purpose = $this->record->purpose;
-                    $newStatus = match($purpose->name) {
+                    OutboundItem::create([
+                        'outbound_id' => $this->record->outbound_id,
+                        'item_id' => $item->item_id,
+                        'quantity' => 1,
+                        'purpose_id' => $data['purpose_id']
+                    ]);
+
+                    // Update status berdasarkan purpose yang baru ditambahkan
+                    $outboundItem = OutboundItem::where('outbound_id', $this->record->outbound_id)
+                        ->where('item_id', $item->item_id)
+                        ->first();
+
+                    $newStatus = match($outboundItem->purpose->name) {
                         'Sewa' => 'masa_sewa',
                         'Non Sewa' => 'terjual',
                         'Peminjaman' => 'dipinjam',
@@ -192,12 +203,6 @@ class EditOutboundRecord extends EditRecord
                     };
                     
                     $item->update(['status' => $newStatus]);
-                    
-                    OutboundItem::create([
-                        'outbound_id' => $this->record->outbound_id,
-                        'item_id' => $item->item_id,
-                        'quantity' => 1
-                    ]);
                     $addedCount++;
                 } else {
                     $errors[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> tidak ditemukan atau tidak tersedia";

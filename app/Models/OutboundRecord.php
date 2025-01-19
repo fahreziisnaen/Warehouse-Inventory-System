@@ -16,7 +16,6 @@ class OutboundRecord extends Model
         'delivery_date',
         'vendor_id',
         'project_id',
-        'purpose_id',
         'part_number_id',
         'batch_quantity',
         'note'
@@ -42,11 +41,6 @@ class OutboundRecord extends Model
             ->with(['inboundItem.inboundRecord']);
     }
 
-    public function purpose(): BelongsTo
-    {
-        return $this->belongsTo(Purpose::class, 'purpose_id', 'purpose_id');
-    }
-
     public function batchItemHistories()
     {
         return $this->morphMany(BatchItemHistory::class, 'recordable', 'recordable_type', 'recordable_id', 'outbound_id')
@@ -62,9 +56,8 @@ class OutboundRecord extends Model
     {
         static::created(function ($outboundRecord) {
             // Update status item berdasarkan tujuan saat create
-            $purpose = $outboundRecord->purpose;
             foreach ($outboundRecord->outboundItems as $outboundItem) {
-                $newStatus = match($purpose->name) {
+                $newStatus = match($outboundItem->purpose->name) {
                     'Sewa' => 'masa_sewa',
                     'Pembelian' => 'terjual',
                     'Peminjaman' => 'dipinjam',
@@ -86,9 +79,8 @@ class OutboundRecord extends Model
 
         static::updated(function ($outboundRecord) {
             // Update status item berdasarkan tujuan saat update
-            $purpose = $outboundRecord->purpose;
             foreach ($outboundRecord->outboundItems as $outboundItem) {
-                $newStatus = match($purpose->name) {
+                $newStatus = match($outboundItem->purpose->name) {
                     'Sewa' => 'masa_sewa',
                     'Pembelian' => 'terjual',
                     'Peminjaman' => 'dipinjam',
@@ -127,13 +119,11 @@ class OutboundRecord extends Model
         });
     }
 
-    public static function generateLkbNumber(): string
+    public static function generateLkbNumber(string $location): string
     {
         $currentMonth = now()->format('m');
         $currentYear = now()->format('Y');
         
-        // Ambil lokasi dari form request
-        $location = request('location', 'Gudang Jakarta');
         $locationCode = match($location) {
             'Gudang Surabaya' => 'SBY',
             'Gudang Jakarta' => 'JKT',

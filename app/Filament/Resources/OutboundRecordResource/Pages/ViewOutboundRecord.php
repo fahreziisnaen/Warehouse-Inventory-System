@@ -40,9 +40,6 @@ class ViewOutboundRecord extends ViewRecord
                             ->label('Project ID')
                             ->url(fn ($record) => url("/admin/projects/{$record->project_id}"))
                             ->openUrlInNewTab(),
-                        TextEntry::make('purpose.name')
-                            ->label('Tujuan')
-                            ->badge(),
                         TextEntry::make('note')
                             ->label('Catatan')
                             ->columnSpanFull()
@@ -67,6 +64,15 @@ class ViewOutboundRecord extends ViewRecord
                                     ->url(fn ($record) => $record->inboundItem ? 
                                         url("/admin/inbound-records/{$record->inboundItem->inbound_id}") : null)
                                     ->openUrlInNewTab(),
+                                TextEntry::make('purpose.name')
+                                    ->label('Tujuan')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'Sewa' => 'success',
+                                        'Non Sewa' => 'danger',
+                                        'Peminjaman' => 'warning',
+                                        default => 'primary',
+                                    }),
                                 TextEntry::make('item.status')
                                     ->label('Status')
                                     ->badge()
@@ -80,7 +86,7 @@ class ViewOutboundRecord extends ViewRecord
                                 TextEntry::make('quantity')
                                     ->label('Quantity'),
                             ])
-                            ->columns(6),
+                            ->columns(7),
                     ])
                     ->visible(fn ($record) => $record->outboundItems->count() > 0),
 

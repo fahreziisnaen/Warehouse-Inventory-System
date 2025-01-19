@@ -12,6 +12,7 @@ use Filament\Actions\Action;
 use App\Models\Item;
 use App\Models\BatchItem;
 use Illuminate\Support\HtmlString;
+use Illuminate\Database\Eloquent\Model;
 
 class EditInboundRecord extends EditRecord
 {
@@ -283,6 +284,10 @@ class EditInboundRecord extends EditRecord
                             'Gudang Surabaya' => 'Gudang Surabaya',
                         ])
                         ->required(),
+                    Forms\Components\Textarea::make('note')
+                        ->label('Catatan')
+                        ->nullable()
+                        ->columnSpanFull(),
                 ])
                 ->columns(2),
 
@@ -416,5 +421,15 @@ class EditInboundRecord extends EditRecord
 
             $this->redirect(EditInboundRecord::getUrl(['record' => $this->record]));
         }
+    }
+
+    protected function afterSave(): void
+    {
+        Notification::make()
+            ->success()
+            ->title('Berhasil disimpan')
+            ->send();
+
+        $this->redirect(static::getResource()::getUrl('view', ['record' => $this->record]));
     }
 }
