@@ -13,8 +13,12 @@ use Illuminate\Database\Eloquent\Builder;
 use Filament\Tables\Filters\Filter;
 use App\Models\BatchItem;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Radio;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Collection;
 
 class OutboundRecordResource extends Resource
 {
@@ -33,7 +37,7 @@ class OutboundRecordResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Informasi Dasar')
                     ->schema([
-                        Forms\Components\Radio::make('lkb_type')
+                        Radio::make('lkb_type')
                             ->label('Tipe Nomor LKB')
                             ->options([
                                 'new' => 'No LKB Baru',
@@ -41,12 +45,19 @@ class OutboundRecordResource extends Resource
                             ])
                             ->default('new')
                             ->inline()
+                            ->live(),
+
+                        Select::make('location')
+                            ->label('Lokasi')
+                            ->options([
+                                'Gudang Jakarta' => 'Gudang Jakarta',
+                                'Gudang Surabaya' => 'Gudang Surabaya',
+                            ])
+                            ->required()
                             ->live()
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 if ($get('lkb_type') === 'new') {
-                                    $set('lkb_number', \App\Models\OutboundRecord::generateLkbNumber());
-                                } else {
-                                    $set('lkb_number', '');
+                                    $set('lkb_number', \App\Models\OutboundRecord::generateLkbNumber($get('location')));
                                 }
                             }),
 
@@ -57,8 +68,10 @@ class OutboundRecordResource extends Resource
                             ->unique(ignoreRecord: true)
                             ->disabled(fn (Get $get): bool => $get('lkb_type') === 'new')
                             ->dehydrated()
-                            ->default(fn () => \App\Models\OutboundRecord::generateLkbNumber())
-                            ->visible(fn (Get $get): bool => $get('lkb_type') !== null),
+                            ->visible(fn (Get $get): bool => 
+                                $get('lkb_type') !== null && 
+                                filled($get('location'))
+                            ),
                         Forms\Components\TextInput::make('delivery_note_number')
                             ->label('Nomor Surat Jalan')
                             ->nullable()
@@ -67,31 +80,34 @@ class OutboundRecordResource extends Resource
                             ->label('Delivery Date')
                             ->required()
                             ->disabled(fn ($context) => $context === 'view'),
-                        Forms\Components\Select::make('vendor_id')
-                            ->options(function () {
-                                return \App\Models\Vendor::whereHas('vendorType', fn($q) => 
-                                        $q->where('type_name', 'Customer')
-                                )->pluck('vendor_name', 'vendor_id');
-                            })
-                            ->label('Customer')
-                            ->required()
-                            ->preload()
-                            ->searchable()
-                            ->disabled(fn ($context) => $context === 'view'),
                         Forms\Components\Select::make('project_id')
-                            ->options(fn () => \App\Models\Project::pluck('project_id', 'project_id'))
+                            ->relationship('project', 'project_id')
                             ->label('Project ID')
-                            ->required()
-                            ->preload()
                             ->searchable()
-                            ->disabled(fn ($context) => $context === 'view'),
-                        Forms\Components\Select::make('purpose_id')
-                            ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
-                            ->label('Tujuan')
-                            ->required()
                             ->preload()
+                            ->live()
+                            ->afterStateUpdated(function (Set $set, $state) {
+                                if ($state) {
+                                    $project = \App\Models\Project::find($state);
+                                    if ($project) {
+                                        // Hanya set vendor jika belum ada vendor yang dipilih
+                                        $set('default_vendor_id', $project->vendor_id);
+                                    }
+                                }
+                            }),
+                        Forms\Components\Select::make('vendor_id')
+                            ->relationship('vendor', 'vendor_name')
+                            ->label('User')
+                            ->default(fn (Get $get) => $get('default_vendor_id'))
+                            ->required()
                             ->searchable()
-                            ->disabled(fn ($context) => $context === 'view'),
+                            ->preload()
+                            ->live(),
+                        Forms\Components\Hidden::make('default_vendor_id'),
+                        Forms\Components\Textarea::make('note')
+                            ->label('Catatan')
+                            ->nullable()
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
                 Forms\Components\Section::make('Items')
@@ -120,31 +136,18 @@ class OutboundRecordResource extends Resource
                                     ->disabled(fn (Get $get): bool => !filled($get('brand_id')))
                                     ->reactive(),
 
+                                Forms\Components\Select::make('purpose_id')
+                                    ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
+                                    ->label('Tujuan')
+                                    ->required()
+                                    ->searchable()
+                                    ->preload(),
+
                                 Forms\Components\Textarea::make('bulk_serial_numbers')
                                     ->label('Serial Numbers')
                                     ->required(fn (Get $get): bool => filled($get('brand_id')))
                                     ->disabled(fn (Get $get): bool => !filled($get('part_number_id')))
-                                    ->helperText('Satu serial number per baris')
-                                    ->afterStateUpdated(function ($state, Set $set, Get $get) {
-                                        if (!$state || !$get('brand_id')) return;
-                                        
-                                        $serialNumbers = array_filter(
-                                            explode("\n", str_replace("\r", "", $state))
-                                        );
-                                        $serialNumbers = array_map('trim', $serialNumbers);
-                                        
-                                        foreach ($serialNumbers as $serialNumber) {
-                                            $item = \App\Models\Item::where('serial_number', $serialNumber)
-                                                ->whereIn('status', ['diterima', 'unknown'])
-                                                ->first();
-                                            
-                                            if (!$item) {
-                                                $set('validation_error', "Serial Number {$serialNumber} tidak valid atau tidak tersedia");
-                                                return;
-                                            }
-                                        }
-                                        $set('validation_error', null);
-                                    }),
+                                    ->helperText('Satu serial number per baris'),
 
                                 TextInput::make('validation_error')
                                     ->label('Status')
@@ -153,7 +156,7 @@ class OutboundRecordResource extends Resource
                                     ->visible(fn ($get) => !empty($get('validation_error')))
                                     ->extraAttributes(['class' => 'text-red-500']),
                             ])
-                            ->columns(3)
+                            ->columns(4)
                             ->defaultItems(0)
                             ->addActionLabel('Tambah Item')
                             ->reorderableWithButtons()
@@ -260,7 +263,7 @@ class OutboundRecordResource extends Resource
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('vendor.vendor_name')
-                    ->label('Customer')
+                    ->label('Vendor')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('project.project_id')
@@ -302,11 +305,65 @@ class OutboundRecordResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation()
+                    ->action(function (OutboundRecord $record) {
+                        if ($record->outboundItems()->count() > 0 || $record->batchItemHistories()->count() > 0) {
+                            $itemCount = $record->outboundItems()->count();
+                            $batchCount = $record->batchItemHistories()->count();
+                            
+                            $message = [];
+                            if ($itemCount > 0) {
+                                $message[] = $itemCount . ' item';
+                            }
+                            if ($batchCount > 0) {
+                                $message[] = $batchCount . ' batch item';
+                            }
+                            
+                            Notification::make()
+                                ->danger()
+                                ->title('Tidak dapat menghapus Barang Keluar')
+                                ->body('Barang Keluar ini memiliki ' . implode(' dan ', $message) . ' terkait. Harap hapus semua item terlebih dahulu.')
+                                ->send();
+                                
+                            return;
+                        }
+                        
+                        $record->delete();
+                        
+                        Notification::make()
+                            ->success()
+                            ->title('Barang Keluar berhasil dihapus')
+                            ->send();
+                    })
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $hasItems = $records->some(fn ($record) => 
+                                $record->outboundItems()->count() > 0 || 
+                                $record->batchItemHistories()->count() > 0
+                            );
+                            
+                            if ($hasItems) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Tidak dapat menghapus beberapa Barang Keluar')
+                                    ->body('Beberapa Barang Keluar memiliki item atau batch item terkait. Harap hapus semua item terlebih dahulu.')
+                                    ->send();
+                                    
+                                return;
+                            }
+                            
+                            $records->each->delete();
+                            
+                            Notification::make()
+                                ->success()
+                                ->title('Barang Keluar berhasil dihapus')
+                                ->send();
+                        })
                 ]),
             ]);
     }

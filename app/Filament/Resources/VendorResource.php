@@ -35,14 +35,14 @@ class VendorResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Informasi Vendor')
                     ->schema([
-                        Forms\Components\Select::make('vendor_type_id')
-                            ->relationship('vendorType', 'type_name')
-                            ->label('Customer/Supplier')
-                            ->required(),
                         Forms\Components\TextInput::make('vendor_name')
                             ->label('Nama Perusahaan')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->unique('vendors', 'vendor_name', ignoreRecord: true)
+                            ->validationMessages([
+                                'unique' => 'Nama Perusahaan sudah ada'
+                            ]),
                         Forms\Components\Textarea::make('address')
                             ->label('Alamat')
                             ->required()
@@ -57,13 +57,6 @@ class VendorResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\BadgeColumn::make('vendorType.type_name')
-                    ->label('Customer/Supplier')
-                    ->colors([
-                        'warning' => fn ($state) => $state === 'Supplier',
-                        'success' => fn ($state) => $state === 'Customer',
-                    ])
-                    ->sortable(),
                 Tables\Columns\TextColumn::make('vendor_name')
                     ->label('Nama Perusahaan')
                     ->searchable(),
@@ -71,11 +64,6 @@ class VendorResource extends Resource
                     ->label('Alamat')
                     ->searchable()
                     ->limit(50),
-            ])
-            ->filters([
-                Tables\Filters\SelectFilter::make('vendor_type')
-                    ->relationship('vendorType', 'type_name')
-                    ->label('Customer/Supplier'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -113,8 +101,6 @@ class VendorResource extends Resource
                     ->schema([
                         TextEntry::make('vendor_name')
                             ->label('Nama Vendor'),
-                        TextEntry::make('vendorType.type_name')
-                            ->label('Tipe'),
                         TextEntry::make('address')
                             ->label('Alamat')
                             ->columnSpanFull(),
@@ -132,8 +118,7 @@ class VendorResource extends Resource
                                 TextEntry::make('status.name')
                                     ->label('Status'),
                             ])
-                            ->columns(3)
-                            ->visible(fn ($record) => $record->vendorType->type_name === 'Customer')
+                            ->columns(3),
                     ]),
 
                 Section::make('Purchase Orders')
@@ -148,8 +133,7 @@ class VendorResource extends Resource
                                 TextEntry::make('project.project_name')
                                     ->label('Project'),
                             ])
-                            ->columns(3)
-                            ->visible(fn ($record) => $record->vendorType->type_name === 'Supplier')
+                            ->columns(3),
                     ]),
 
                 Section::make('Barang Keluar')
@@ -166,8 +150,7 @@ class VendorResource extends Resource
                                 TextEntry::make('purpose.name')
                                     ->label('Tujuan'),
                             ])
-                            ->columns(4)
-                            ->visible(fn ($record) => $record->vendorType->type_name === 'Customer')
+                            ->columns(4),
                     ]),
             ]);
     }

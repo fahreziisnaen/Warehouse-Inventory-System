@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id('outbound_item_id');
             $table->foreignId('outbound_id')->constrained('outbound_records', 'outbound_id')->cascadeOnDelete();
             $table->foreignId('item_id')->constrained('items', 'item_id');
+            $table->foreignId('purpose_id')->constrained('purposes', 'purpose_id');
             $table->integer('quantity');
             $table->timestamps();
         });

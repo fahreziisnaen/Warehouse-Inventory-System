@@ -48,6 +48,10 @@ class ViewInboundRecord extends ViewRecord
                             ->color('success')
                             ->url(fn ($record) => url("/admin/purchase-orders/{$record->po_id}"))
                             ->openUrlInNewTab(),
+                        TextEntry::make('note')
+                            ->label('Catatan')
+                            ->columnSpanFull()
+                            ->visible(fn ($record) => filled($record->note)),
                     ])
                     ->columns(2),
 

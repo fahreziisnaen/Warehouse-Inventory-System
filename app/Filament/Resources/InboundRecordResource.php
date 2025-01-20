@@ -20,6 +20,8 @@ use Filament\Forms\Components\Textarea;
 use App\Models\Item;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Collection;
 
 class InboundRecordResource extends Resource
 {
@@ -45,12 +47,20 @@ class InboundRecordResource extends Resource
                             ])
                             ->default('new')
                             ->inline()
+                            ->live(),
+
+                        Select::make('location')
+                            ->label('Lokasi')
+                            ->options([
+                                'Gudang Jakarta' => 'Gudang Jakarta',
+                                'Gudang Surabaya' => 'Gudang Surabaya',
+                            ])
+                            ->required()
                             ->live()
                             ->afterStateUpdated(function (Set $set, Get $get) {
                                 if ($get('lpb_type') === 'new') {
+                                    request()->merge(['location' => $get('location')]);
                                     $set('lpb_number', \App\Models\InboundRecord::generateLpbNumber());
-                                } else {
-                                    $set('lpb_number', '');
                                 }
                             }),
 
@@ -60,20 +70,19 @@ class InboundRecordResource extends Resource
                             ->unique(ignoreRecord: true)
                             ->disabled(fn (Get $get): bool => $get('lpb_type') === 'new')
                             ->dehydrated()
-                            ->default(fn () => \App\Models\InboundRecord::generateLpbNumber())
-                            ->visible(fn (Get $get): bool => $get('lpb_type') !== null),
+                            ->visible(fn (Get $get): bool => 
+                                $get('lpb_type') !== null && 
+                                filled($get('location'))
+                            ),
 
                         DatePicker::make('receive_date')
                             ->label('Tanggal Terima')
                             ->required()
                             ->default(now()),
-                        Select::make('location')
-                            ->label('Lokasi')
-                            ->options([
-                                'Gudang Jakarta' => 'Gudang Jakarta',
-                                'Gudang Surabaya' => 'Gudang Surabaya',
-                            ])
-                            ->required(),
+                        Forms\Components\Textarea::make('note')
+                            ->label('Catatan')
+                            ->nullable()
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
@@ -143,9 +152,17 @@ class InboundRecordResource extends Resource
                                         ])->part_number_id;
                                     }),
 
+                                Select::make('condition')
+                                    ->label('Kondisi')
+                                    ->options([
+                                        'Baru' => 'Baru',
+                                        'Bekas' => 'Bekas',
+                                    ])
+                                    ->required(),
+
                                 Textarea::make('bulk_serial_numbers')
                                     ->label('Serial Numbers')
-                                    ->required(fn (Get $get): bool => filled($get('brand_id')))
+                                    ->required()
                                     ->helperText('Satu serial number per baris'),
                             ])
                             ->columns(3)
@@ -303,11 +320,51 @@ class InboundRecordResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation()
+                    ->action(function (InboundRecord $record) {
+                        if ($record->inboundItems()->count() > 0) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Tidak dapat menghapus Barang Masuk')
+                                ->body('Barang Masuk ini memiliki ' . $record->inboundItems()->count() . ' item terkait. Harap hapus semua item terlebih dahulu.')
+                                ->send();
+                                
+                            return;
+                        }
+                        
+                        $record->delete();
+                        
+                        Notification::make()
+                            ->success()
+                            ->title('Barang Masuk berhasil dihapus')
+                            ->send();
+                    })
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $hasItems = $records->some(fn ($record) => $record->inboundItems()->count() > 0);
+                            
+                            if ($hasItems) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Tidak dapat menghapus beberapa Barang Masuk')
+                                    ->body('Beberapa Barang Masuk memiliki item terkait. Harap hapus semua item terlebih dahulu.')
+                                    ->send();
+                                    
+                                return;
+                            }
+                            
+                            $records->each->delete();
+                            
+                            Notification::make()
+                                ->success()
+                                ->title('Barang Masuk berhasil dihapus')
+                                ->send();
+                        })
                 ]),
             ]);
     }
@@ -371,7 +428,8 @@ class InboundRecordResource extends Resource
                         $newItem = Item::create([
                             'part_number_id' => $itemData['part_number_id'],
                             'serial_number' => $serialNumber,
-                            'status' => 'diterima'
+                            'status' => 'diterima',
+                            'condition' => $itemData['condition'],
                         ]);
                         
                         if ($newItem && $newItem->item_id) {

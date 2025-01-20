@@ -43,14 +43,7 @@ class PurchaseOrderResource extends Resource
                             ->label('Tanggal PO')
                             ->required(),
                         Forms\Components\Select::make('vendor_id')
-                            ->relationship(
-                                'vendor', 
-                                'vendor_name',
-                                fn (Builder $query) => $query
-                                    ->whereHas('vendorType', fn($q) => 
-                                        $q->where('type_name', 'Supplier')
-                                    )
-                            )
+                            ->relationship('vendor', 'vendor_name')
                             ->label('Supplier')
                             ->required()
                             ->preload()

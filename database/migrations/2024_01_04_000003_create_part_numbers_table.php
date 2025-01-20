@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('brand_id')->constrained('brands', 'brand_id');
             $table->string('part_number')->unique();
             $table->text('description')->nullable();
+            $table->boolean('is_equipment')->default(true);
             $table->timestamps();
         });
     }

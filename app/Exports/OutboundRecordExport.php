@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\OutboundRecord;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Maatwebsite\Excel\Concerns\Exportable;
+use PhpOffice\PhpSpreadsheet\RichText\RichText;
 
 class OutboundRecordExport
 {
@@ -23,7 +24,7 @@ class OutboundRecordExport
     const COL_BRAND = 'H';
     const COL_SERIAL = 'I';
     const COL_LPB = 'J';
-    const COL_STATUS = 'K';
+    const COL_PURPOSE = 'K';
 
     public function __construct(OutboundRecord $outboundRecord)
     {
@@ -34,7 +35,7 @@ class OutboundRecordExport
     {
         return match($status) {
             'masa_sewa' => 'Sewa',
-            'terjual' => 'Non Sewa',
+            'non_sewa' => 'Non Sewa',
             'dipinjam' => 'Peminjaman',
             default => ucfirst($status)
         };
@@ -55,6 +56,7 @@ class OutboundRecordExport
             '[DELIVERY_DATE]' => $this->outboundRecord->delivery_date->format('d-m-Y'),
             '[DELIVERY_NOTE]' => $this->outboundRecord->delivery_note_number ?? '-',
             '[DELIVERY_NOTE_NUMBER]' => $this->outboundRecord->delivery_note_number ?? '-',
+            '[NOTE]' => $this->outboundRecord->note ?? '-',
         ];
 
         $this->replaceInWorksheet($sheet, $replacements);
@@ -131,7 +133,7 @@ class OutboundRecordExport
             $sheet->setCellValue(self::COL_BRAND . $currentRow, $firstItem->item->partNumber->brand->brand_name);
             $sheet->setCellValue(self::COL_SERIAL . $currentRow, $firstItem->item->serial_number);
             $sheet->setCellValue(self::COL_LPB . $currentRow, $firstItem->inboundItem?->inboundRecord?->lpb_number ?? '-');
-            $sheet->setCellValue(self::COL_STATUS . $currentRow, $this->formatStatus($firstItem->item->status));
+            $sheet->setCellValue(self::COL_PURPOSE . $currentRow, $firstItem->purpose->name);
             
             $currentRow++;
 
@@ -139,7 +141,7 @@ class OutboundRecordExport
             foreach ($items->skip(1) as $item) {
                 $sheet->setCellValue(self::COL_SERIAL . $currentRow, $item->item->serial_number);
                 $sheet->setCellValue(self::COL_LPB . $currentRow, $item->inboundItem?->inboundRecord?->lpb_number ?? '-');
-                $sheet->setCellValue(self::COL_STATUS . $currentRow, $this->formatStatus($item->item->status));
+                $sheet->setCellValue(self::COL_PURPOSE . $currentRow, $item->purpose->name);
                 $currentRow++;
             }
 
@@ -159,7 +161,7 @@ class OutboundRecordExport
             $sheet->setCellValue(self::COL_BRAND . $currentRow, $firstHistory->batchItem->partNumber->brand->brand_name);
             $sheet->setCellValue(self::COL_SERIAL . $currentRow, '-');
             $sheet->setCellValue(self::COL_LPB . $currentRow, $firstHistory->batchItem->inboundHistories->first()?->recordable?->lpb_number ?? '-');
-            $sheet->setCellValue(self::COL_STATUS . $currentRow, 'Batch Item');
+            $sheet->setCellValue(self::COL_PURPOSE . $currentRow, '-');
             
             $currentRow++;
             $rowNumber++;
@@ -182,7 +184,18 @@ class OutboundRecordExport
                 if (is_string($value)) {
                     foreach ($replacements as $search => $replace) {
                         if (strpos($value, $search) !== false) {
-                            $cell->setValue(str_replace($search, $replace, $value));
+                            if ($search === '[NOTE]') {
+                                // Buat RichText untuk note
+                                $richText = new RichText();
+                                $bold = $richText->createTextRun("Note :");
+                                $bold->getFont()->setBold(true);
+                                $richText->createText("\n" . ($this->outboundRecord->note ?? '-'));
+                                
+                                $cell->setValue($richText);
+                                $cell->getStyle()->getAlignment()->setWrapText(true);
+                            } else {
+                                $cell->setValue(str_replace($search, $replace, $value));
+                            }
                         }
                     }
                 }

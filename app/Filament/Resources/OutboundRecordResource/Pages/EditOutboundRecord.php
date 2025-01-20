@@ -12,6 +12,7 @@ use App\Models\OutboundItem;
 use App\Models\BatchItem;
 use Filament\Notifications\Notification;
 use Illuminate\Support\HtmlString;
+use App\Models\InboundItem;
 
 class EditOutboundRecord extends EditRecord
 {
@@ -48,6 +49,13 @@ class EditOutboundRecord extends EditRecord
                         ->label('Serial Numbers')
                         ->required()
                         ->helperText('Satu serial number per baris'),
+
+                    Forms\Components\Select::make('purpose_id')
+                        ->relationship('purpose', 'name')
+                        ->label('Tujuan')
+                        ->required()
+                        ->searchable()
+                        ->preload(),
                 ]),
 
             Action::make('addBatchItem')
@@ -96,26 +104,14 @@ class EditOutboundRecord extends EditRecord
                         ->label('Tanggal Keluar')
                         ->required(),
                     Forms\Components\Select::make('vendor_id')
-                        ->relationship(
-                            'vendor', 
-                            'vendor_name',
-                            fn ($query) => $query->whereHas('vendorType', fn($q) => 
-                                $q->where('type_name', 'Customer')
-                            )
-                        )
-                        ->label('Customer')
+                        ->relationship('vendor', 'vendor_name')
+                        ->label('Vendor')
                         ->required()
                         ->searchable()
                         ->preload(),
                     Forms\Components\Select::make('project_id')
                         ->relationship('project', 'project_id')
                         ->label('Project ID')
-                        ->required()
-                        ->searchable()
-                        ->preload(),
-                    Forms\Components\Select::make('purpose_id')
-                        ->relationship('purpose', 'name')
-                        ->label('Tujuan')
                         ->required()
                         ->searchable()
                         ->preload(),
@@ -182,22 +178,26 @@ class EditOutboundRecord extends EditRecord
                     ->first();
 
                 if ($item) {
-                    // Update status berdasarkan purpose
-                    $purpose = $this->record->purpose;
-                    $newStatus = match($purpose->name) {
-                        'Sewa' => 'masa_sewa',
-                        'Non Sewa' => 'terjual',
-                        'Peminjaman' => 'dipinjam',
+                    OutboundItem::create([
+                        'outbound_id' => $this->record->outbound_id,
+                        'item_id' => $item->item_id,
+                        'quantity' => 1,
+                        'purpose_id' => $data['purpose_id']
+                    ]);
+
+                    // Update status berdasarkan purpose yang baru ditambahkan
+                    $outboundItem = OutboundItem::where('outbound_id', $this->record->outbound_id)
+                        ->where('item_id', $item->item_id)
+                        ->first();
+
+                    $newStatus = match($outboundItem->purpose->name) {
+                        'Sewa' => Item::STATUS_MASA_SEWA,
+                        'Non Sewa' => Item::STATUS_NON_SEWA,
+                        'Peminjaman' => Item::STATUS_DIPINJAM,
                         default => $item->status
                     };
                     
                     $item->update(['status' => $newStatus]);
-                    
-                    OutboundItem::create([
-                        'outbound_id' => $this->record->outbound_id,
-                        'item_id' => $item->item_id,
-                        'quantity' => 1
-                    ]);
                     $addedCount++;
                 } else {
                     $errors[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> tidak ditemukan atau tidak tersedia";
@@ -268,12 +268,24 @@ class EditOutboundRecord extends EditRecord
         $outboundItem = OutboundItem::find($outboundItemId);
         
         if ($outboundItem) {
-            // Cek status item
-            $validStatuses = ['masa_sewa', 'terjual', 'dipinjam'];
-            if ($outboundItem->item && !in_array($outboundItem->item->status, $validStatuses)) {
+            $item = $outboundItem->item;
+            
+            // Cek apakah ini transaksi terakhir untuk item ini
+            $lastOutbound = OutboundItem::where('item_id', $item->item_id)
+                ->join('outbound_records', 'outbound_items.outbound_id', '=', 'outbound_records.outbound_id')
+                ->orderBy('outbound_records.delivery_date', 'desc')
+                ->first();
+                
+            $lastInbound = InboundItem::where('item_id', $item->item_id)
+                ->join('inbound_records', 'inbound_items.inbound_id', '=', 'inbound_records.inbound_id')
+                ->orderBy('inbound_records.receive_date', 'desc')
+                ->first();
+
+            // Jika ini bukan transaksi terakhir, tidak boleh dihapus
+            if ($lastOutbound->outbound_item_id !== $outboundItem->outbound_item_id) {
                 Notification::make()
                     ->title('Item tidak dapat dihapus')
-                    ->body("Item dengan status '{$outboundItem->item->status}' tidak dapat dihapus karena status tidak sesuai. Item harus berstatus Disewa, Terjual, atau Dipinjam.")
+                    ->body('Item ini memiliki transaksi yang lebih baru. Hanya transaksi terakhir yang dapat dihapus.')
                     ->danger()
                     ->persistent()
                     ->actions([
@@ -287,11 +299,31 @@ class EditOutboundRecord extends EditRecord
                 return;
             }
 
-            // Jika status valid, lanjutkan proses delete
-            if ($outboundItem->item) {
-                $outboundItem->item->update([
-                    'status' => 'unknown'
-                ]);
+            // Update status item berdasarkan transaksi sebelumnya
+            if ($lastInbound && $lastInbound->inbound_record->receive_date > $outboundItem->outboundRecord->delivery_date) {
+                // Jika ada inbound yang lebih baru, kembalikan ke status diterima
+                $item->update(['status' => Item::STATUS_DITERIMA]);
+            } else {
+                // Cari outbound sebelumnya
+                $previousOutbound = OutboundItem::where('item_id', $item->item_id)
+                    ->join('outbound_records', 'outbound_items.outbound_id', '=', 'outbound_records.outbound_id')
+                    ->where('outbound_records.delivery_date', '<', $outboundItem->outboundRecord->delivery_date)
+                    ->orderBy('outbound_records.delivery_date', 'desc')
+                    ->first();
+
+                if ($previousOutbound) {
+                    // Jika ada outbound sebelumnya, kembalikan ke status sesuai purpose sebelumnya
+                    $newStatus = match($previousOutbound->purpose->name) {
+                        'Sewa' => Item::STATUS_MASA_SEWA,
+                        'Non Sewa' => Item::STATUS_NON_SEWA,
+                        'Peminjaman' => Item::STATUS_DIPINJAM,
+                        default => Item::STATUS_UNKNOWN
+                    };
+                    $item->update(['status' => $newStatus]);
+                } else {
+                    // Jika tidak ada transaksi sebelumnya, set ke unknown
+                    $item->update(['status' => Item::STATUS_UNKNOWN]);
+                }
             }
 
             // Delete outbound item

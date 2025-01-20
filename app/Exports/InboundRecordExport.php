@@ -4,6 +4,7 @@ namespace App\Exports;
 
 use App\Models\InboundRecord;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\RichText\RichText;
 use Maatwebsite\Excel\Concerns\Exportable;
 
 class InboundRecordExport
@@ -23,6 +24,8 @@ class InboundRecordExport
     const COL_BRAND_START = 'H';
     const COL_BRAND_END = 'I';
     const COL_SERIAL = 'J';
+    const NOTE_ROW = 13;
+    const NOTE_COL = 'B';
 
     public function __construct(InboundRecord $inboundRecord)
     {
@@ -41,8 +44,9 @@ class InboundRecordExport
             '[RECEIVE_DATE]' => $this->inboundRecord->receive_date->format('d-m-Y'),
             '[PO_NUMBER]' => $this->inboundRecord->purchaseOrder?->po_number ?? '-',
             '[PO_DATE]' => $this->inboundRecord->purchaseOrder?->po_date?->format('d-m-Y') ?? '-',
-            '[VENDOR_NAME]' => $this->inboundRecord->project->vendor->vendor_name,
+            '[VENDOR_NAME]' => $this->getVendorName(),
             '[PROJECT_ID]' => $this->inboundRecord->project->project_id,
+            '[NOTE]' => "Note :\n" . ($this->inboundRecord->note ?? '-'),
         ];
 
         $this->replaceInWorksheet($sheet, $replacements);
@@ -118,7 +122,11 @@ class InboundRecordExport
             
             // Row pertama dari part number
             $sheet->setCellValue(self::COL_NO . $currentRow, $rowNumber);
-            $sheet->setCellValue(self::COL_PART_NO . $currentRow, $partNumber);
+            $sheet->setCellValue(self::COL_PART_NO . $currentRow, 
+                $firstItem->item->condition === 'Bekas' 
+                    ? sprintf('%s [Bks]', $partNumber)
+                    : $partNumber
+            );
             $sheet->setCellValue(self::COL_DESC_START . $currentRow, $firstItem->item->partNumber->description);
             $sheet->setCellValue(self::COL_QTY . $currentRow, $items->count());
             $sheet->setCellValue('G' . $currentRow, 'Unit');
@@ -170,11 +178,33 @@ class InboundRecordExport
                 if (is_string($value)) {
                     foreach ($replacements as $search => $replace) {
                         if (strpos($value, $search) !== false) {
-                            $cell->setValue(str_replace($search, $replace, $value));
+                            if ($search === '[NOTE]') {
+                                // Buat RichText untuk note
+                                $richText = new RichText();
+                                $bold = $richText->createTextRun("Note :");
+                                $bold->getFont()->setBold(true);
+                                $richText->createText("\n" . ($this->inboundRecord->note ?? '-'));
+                                
+                                $cell->setValue($richText);
+                            } else {
+                                $cell->setValue(str_replace($search, $replace, $value));
+                            }
+                            $cell->getStyle()->getAlignment()->setWrapText(true);
                         }
                     }
                 }
             }
         }
+    }
+
+    private function getVendorName(): string 
+    {
+        // Ambil vendor dari PO jika ada
+        if ($this->inboundRecord->purchaseOrder) {
+            return $this->inboundRecord->purchaseOrder->vendor->vendor_name;
+        }
+        
+        // Ambil vendor dari project
+        return $this->inboundRecord->project->vendor->vendor_name;
     }
 } 

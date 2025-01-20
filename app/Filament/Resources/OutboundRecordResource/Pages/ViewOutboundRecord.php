@@ -33,16 +33,17 @@ class ViewOutboundRecord extends ViewRecord
                             ->label('Tanggal Keluar')
                             ->date(),
                         TextEntry::make('vendor.vendor_name')
-                            ->label('Customer')
+                            ->label('User')
                             ->url(fn ($record) => url("/admin/vendors/{$record->vendor_id}"))
                             ->openUrlInNewTab(),
                         TextEntry::make('project.project_id')
                             ->label('Project ID')
                             ->url(fn ($record) => url("/admin/projects/{$record->project_id}"))
                             ->openUrlInNewTab(),
-                        TextEntry::make('purpose.name')
-                            ->label('Tujuan')
-                            ->badge(),
+                        TextEntry::make('note')
+                            ->label('Catatan')
+                            ->columnSpanFull()
+                            ->visible(fn ($record) => filled($record->note)),
                     ])
                     ->columns(2),
 
@@ -63,6 +64,15 @@ class ViewOutboundRecord extends ViewRecord
                                     ->url(fn ($record) => $record->inboundItem ? 
                                         url("/admin/inbound-records/{$record->inboundItem->inbound_id}") : null)
                                     ->openUrlInNewTab(),
+                                TextEntry::make('purpose.name')
+                                    ->label('Tujuan')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        'Sewa' => 'success',
+                                        'Non Sewa' => 'danger',
+                                        'Peminjaman' => 'warning',
+                                        default => 'primary',
+                                    }),
                                 TextEntry::make('item.status')
                                     ->label('Status')
                                     ->badge()
@@ -76,7 +86,7 @@ class ViewOutboundRecord extends ViewRecord
                                 TextEntry::make('quantity')
                                     ->label('Quantity'),
                             ])
-                            ->columns(6),
+                            ->columns(7),
                     ])
                     ->visible(fn ($record) => $record->outboundItems->count() > 0),
 
