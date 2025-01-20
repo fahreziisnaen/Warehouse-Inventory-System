@@ -48,9 +48,10 @@ class CreateInboundRecord extends CreateRecord
                         $existingItem = Item::where('serial_number', $serialNumber)->first();
                         
                         if ($existingItem) {
+                            // Update validasi status
                             if ($existingItem->status === 'diterima') {
                                 $invalidSerials[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> masih berada di Gudang";
-                            } elseif (!in_array($existingItem->status, ['masa_sewa', 'dipinjam', 'terjual', 'unknown'])) {
+                            } elseif (!in_array($existingItem->status, ['masa_sewa', 'non_sewa', 'unknown'])) {
                                 $invalidSerials[] = "Serial Number <strong class='text-primary'>{$serialNumber}</strong> memiliki status yang tidak valid";
                             } else {
                                 $hasItems = true;

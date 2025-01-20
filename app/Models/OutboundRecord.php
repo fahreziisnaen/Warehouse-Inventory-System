@@ -52,6 +52,11 @@ class OutboundRecord extends Model
         return $this->belongsTo(PartNumber::class, 'part_number_id');
     }
 
+    public function purpose(): BelongsTo
+    {
+        return $this->belongsTo(Purpose::class, 'purpose_id');
+    }
+
     protected static function booted()
     {
         static::created(function ($outboundRecord) {

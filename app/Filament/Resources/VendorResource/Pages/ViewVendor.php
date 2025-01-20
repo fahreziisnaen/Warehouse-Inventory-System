@@ -23,14 +23,6 @@ class ViewVendor extends ViewRecord
                         TextEntry::make('vendor_name')
                             ->label('Nama Vendor')
                             ->weight(FontWeight::Bold),
-                        TextEntry::make('vendorType.type_name')
-                            ->label('Tipe')
-                            ->badge()
-                            ->color(fn (string $state): string => match ($state) {
-                                'Customer' => 'success',
-                                'Supplier' => 'warning',
-                                default => 'gray',
-                            }),
                         TextEntry::make('address')
                             ->label('Alamat')
                             ->columnSpanFull(),
@@ -49,8 +41,7 @@ class ViewVendor extends ViewRecord
                                     ->label('Nama Project'),
                             ])
                             ->columns(2),
-                    ])
-                    ->visible(fn ($record) => $record->vendorType->type_name === 'Customer'),
+                    ]),
 
                 Section::make('Purchase Orders')
                     ->schema([
@@ -67,8 +58,7 @@ class ViewVendor extends ViewRecord
                                     ->label('Project'),
                             ])
                             ->columns(3),
-                    ])
-                    ->visible(fn ($record) => $record->vendorType->type_name === 'Supplier'),
+                    ]),
             ]);
     }
 } 

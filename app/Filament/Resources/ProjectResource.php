@@ -45,14 +45,7 @@ class ProjectResource extends Resource
                             ->required()
                             ->maxLength(255),
                         Forms\Components\Select::make('vendor_id')
-                            ->relationship(
-                                'vendor',
-                                'vendor_name',
-                                fn (Builder $query) => $query
-                                    ->whereHas('vendorType', fn($q) => 
-                                        $q->where('type_name', 'Customer')
-                                    )
-                            )
+                            ->relationship('vendor', 'vendor_name')
                             ->label('Customer')
                             ->required()
                             ->preload()

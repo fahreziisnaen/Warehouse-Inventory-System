@@ -13,6 +13,7 @@ use App\Models\Item;
 use App\Models\BatchItem;
 use Illuminate\Support\HtmlString;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\OutboundItem;
 
 class EditInboundRecord extends EditRecord
 {
@@ -358,29 +359,60 @@ class EditInboundRecord extends EditRecord
         $inboundItem = InboundItem::find($inboundItemId);
         
         if ($inboundItem) {
-            // Cek status item
-            if ($inboundItem->item && $inboundItem->item->status !== 'diterima') {
+            $item = $inboundItem->item;
+            
+            // Cek transaksi terakhir
+            $lastInbound = InboundItem::where('item_id', $item->item_id)
+                ->join('inbound_records', 'inbound_items.inbound_id', '=', 'inbound_records.inbound_id')
+                ->orderBy('inbound_records.receive_date', 'desc')
+                ->first();
+
+            $lastOutbound = OutboundItem::where('item_id', $item->item_id)
+                ->join('outbound_records', 'outbound_items.outbound_id', '=', 'outbound_records.outbound_id')
+                ->orderBy('outbound_records.delivery_date', 'desc')
+                ->first();
+
+            // Validasi transaksi terakhir
+            if ($lastInbound->inbound_item_id !== $inboundItem->inbound_item_id) {
                 Notification::make()
                     ->title('Item tidak dapat dihapus')
-                    ->body("Item dengan status '{$inboundItem->item->status}' tidak dapat dihapus karena sudah diproses di transaksi lain.")
+                    ->body('Item ini memiliki transaksi inbound yang lebih baru.')
                     ->danger()
                     ->persistent()
-                    ->actions([
-                        \Filament\Notifications\Actions\Action::make('close')
-                            ->label('Tutup')
-                            ->color('danger')
-                            ->close()
-                    ])
                     ->send();
-                    
                 return;
             }
 
-            // Jika status diterima, lanjutkan proses delete
-            if ($inboundItem->item) {
-                $inboundItem->item->update([
-                    'status' => 'unknown'
-                ]);
+            // Validasi outbound yang lebih baru
+            if ($lastOutbound && $lastOutbound->outboundRecord->delivery_date > $inboundItem->inboundRecord->receive_date) {
+                Notification::make()
+                    ->title('Item tidak dapat dihapus')
+                    ->body('Item ini sudah memiliki transaksi outbound yang lebih baru.')
+                    ->danger()
+                    ->persistent()
+                    ->send();
+                return;
+            }
+
+            // Cari outbound sebelumnya
+            $previousOutbound = OutboundItem::where('item_id', $item->item_id)
+                ->join('outbound_records', 'outbound_items.outbound_id', '=', 'outbound_records.outbound_id')
+                ->where('outbound_records.delivery_date', '<', $inboundItem->inboundRecord->receive_date)
+                ->orderBy('outbound_records.delivery_date', 'desc')
+                ->first();
+
+            if ($previousOutbound) {
+                // Kembalikan ke status outbound sebelumnya
+                $newStatus = match($previousOutbound->purpose->name) {
+                    'Sewa' => Item::STATUS_MASA_SEWA,
+                    'Non Sewa' => Item::STATUS_NON_SEWA,
+                    'Peminjaman' => Item::STATUS_DIPINJAM,
+                    default => Item::STATUS_UNKNOWN
+                };
+                $item->update(['status' => $newStatus]);
+            } else {
+                // Jika tidak ada transaksi sebelumnya
+                $item->update(['status' => Item::STATUS_UNKNOWN]);
             }
 
             // Delete inbound item

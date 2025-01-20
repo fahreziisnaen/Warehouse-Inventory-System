@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('vendors', function (Blueprint $table) {
             $table->id('vendor_id');
-            $table->foreignId('vendor_type_id')->constrained('vendor_types', 'vendor_type_id');
             $table->string('vendor_name');
             $table->text('address');
             $table->timestamps();

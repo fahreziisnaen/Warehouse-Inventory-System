@@ -199,12 +199,12 @@ class InboundRecordExport
 
     private function getVendorName(): string 
     {
-        // Jika ada PO, ambil vendor supplier dari PO
+        // Ambil vendor dari PO jika ada
         if ($this->inboundRecord->purchaseOrder) {
             return $this->inboundRecord->purchaseOrder->vendor->vendor_name;
         }
         
-        // Jika tidak ada PO, ambil vendor customer dari project
+        // Ambil vendor dari project
         return $this->inboundRecord->project->vendor->vendor_name;
     }
 } 

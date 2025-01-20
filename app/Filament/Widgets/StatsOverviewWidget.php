@@ -9,7 +9,7 @@ use App\Models\OutboundRecord;
 use App\Models\Item;
 use Carbon\Carbon;
 
-class StatsOverview extends BaseWidget
+class StatsOverviewWidget extends BaseWidget
 {
     protected function getStats(): array
     {

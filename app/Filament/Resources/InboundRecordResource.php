@@ -20,6 +20,8 @@ use Filament\Forms\Components\Textarea;
 use App\Models\Item;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Collection;
 
 class InboundRecordResource extends Resource
 {
@@ -318,11 +320,51 @@ class InboundRecordResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation()
+                    ->action(function (InboundRecord $record) {
+                        if ($record->inboundItems()->count() > 0) {
+                            Notification::make()
+                                ->danger()
+                                ->title('Tidak dapat menghapus Barang Masuk')
+                                ->body('Barang Masuk ini memiliki ' . $record->inboundItems()->count() . ' item terkait. Harap hapus semua item terlebih dahulu.')
+                                ->send();
+                                
+                            return;
+                        }
+                        
+                        $record->delete();
+                        
+                        Notification::make()
+                            ->success()
+                            ->title('Barang Masuk berhasil dihapus')
+                            ->send();
+                    })
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $hasItems = $records->some(fn ($record) => $record->inboundItems()->count() > 0);
+                            
+                            if ($hasItems) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Tidak dapat menghapus beberapa Barang Masuk')
+                                    ->body('Beberapa Barang Masuk memiliki item terkait. Harap hapus semua item terlebih dahulu.')
+                                    ->send();
+                                    
+                                return;
+                            }
+                            
+                            $records->each->delete();
+                            
+                            Notification::make()
+                                ->success()
+                                ->title('Barang Masuk berhasil dihapus')
+                                ->send();
+                        })
                 ]),
             ]);
     }

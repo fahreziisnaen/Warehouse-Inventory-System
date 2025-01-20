@@ -15,4 +15,11 @@ class InboundItemObserver
             }
         }
     }
+
+    public function deleted(InboundItem $inboundItem)
+    {
+        if ($inboundItem->item) {
+            $inboundItem->item->updateLatestStatus();
+        }
+    }
 } 

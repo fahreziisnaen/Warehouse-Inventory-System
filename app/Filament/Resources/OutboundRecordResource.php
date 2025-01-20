@@ -17,6 +17,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Filament\Notifications\Notification;
+use Illuminate\Database\Eloquent\Collection;
 
 class OutboundRecordResource extends Resource
 {
@@ -94,14 +96,8 @@ class OutboundRecordResource extends Resource
                                 }
                             }),
                         Forms\Components\Select::make('vendor_id')
-                            ->relationship(
-                                'vendor', 
-                                'vendor_name',
-                                fn ($query) => $query->whereHas('vendorType')
-                            )
-                            ->label(fn (Get $get): string => 
-                                \App\Models\Vendor::find($get('vendor_id'))?->vendorType?->type_name ?? 'Customer/Supplier'
-                            )
+                            ->relationship('vendor', 'vendor_name')
+                            ->label('User')
                             ->default(fn (Get $get) => $get('default_vendor_id'))
                             ->required()
                             ->searchable()
@@ -267,7 +263,7 @@ class OutboundRecordResource extends Resource
                     ->date()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('vendor.vendor_name')
-                    ->label('Customer')
+                    ->label('Vendor')
                     ->searchable()
                     ->sortable(),
                 Tables\Columns\TextColumn::make('project.project_id')
@@ -309,11 +305,65 @@ class OutboundRecordResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->requiresConfirmation()
+                    ->action(function (OutboundRecord $record) {
+                        if ($record->outboundItems()->count() > 0 || $record->batchItemHistories()->count() > 0) {
+                            $itemCount = $record->outboundItems()->count();
+                            $batchCount = $record->batchItemHistories()->count();
+                            
+                            $message = [];
+                            if ($itemCount > 0) {
+                                $message[] = $itemCount . ' item';
+                            }
+                            if ($batchCount > 0) {
+                                $message[] = $batchCount . ' batch item';
+                            }
+                            
+                            Notification::make()
+                                ->danger()
+                                ->title('Tidak dapat menghapus Barang Keluar')
+                                ->body('Barang Keluar ini memiliki ' . implode(' dan ', $message) . ' terkait. Harap hapus semua item terlebih dahulu.')
+                                ->send();
+                                
+                            return;
+                        }
+                        
+                        $record->delete();
+                        
+                        Notification::make()
+                            ->success()
+                            ->title('Barang Keluar berhasil dihapus')
+                            ->send();
+                    })
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->action(function (Collection $records) {
+                            $hasItems = $records->some(fn ($record) => 
+                                $record->outboundItems()->count() > 0 || 
+                                $record->batchItemHistories()->count() > 0
+                            );
+                            
+                            if ($hasItems) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Tidak dapat menghapus beberapa Barang Keluar')
+                                    ->body('Beberapa Barang Keluar memiliki item atau batch item terkait. Harap hapus semua item terlebih dahulu.')
+                                    ->send();
+                                    
+                                return;
+                            }
+                            
+                            $records->each->delete();
+                            
+                            Notification::make()
+                                ->success()
+                                ->title('Barang Keluar berhasil dihapus')
+                                ->send();
+                        })
                 ]),
             ]);
     }

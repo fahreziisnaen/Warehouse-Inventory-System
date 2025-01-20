@@ -33,7 +33,7 @@ class ViewOutboundRecord extends ViewRecord
                             ->label('Tanggal Keluar')
                             ->date(),
                         TextEntry::make('vendor.vendor_name')
-                            ->label('Customer')
+                            ->label('User')
                             ->url(fn ($record) => url("/admin/vendors/{$record->vendor_id}"))
                             ->openUrlInNewTab(),
                         TextEntry::make('project.project_id')

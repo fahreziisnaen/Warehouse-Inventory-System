@@ -19,6 +19,7 @@ return new class extends Migration
             $table->foreignId('part_number_id')->nullable()->constrained('part_numbers', 'part_number_id');
             $table->integer('batch_quantity')->nullable();
             $table->text('note')->nullable();
+            $table->foreignId('purpose_id')->constrained('purposes');
             $table->timestamps();
         });
     }
