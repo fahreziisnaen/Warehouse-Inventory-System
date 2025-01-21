@@ -9,6 +9,7 @@ use App\Models\OutboundItem;
 use Filament\Notifications\Notification;
 use Filament\Notifications\Actions\Action;
 use App\Models\BatchItem;
+use Filament\Forms\Components\Select;
 
 class CreateOutboundRecord extends CreateRecord
 {

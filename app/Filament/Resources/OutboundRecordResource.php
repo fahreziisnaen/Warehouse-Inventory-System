@@ -117,6 +117,8 @@ class OutboundRecordResource extends Resource
                                 Forms\Components\Select::make('brand_id')
                                     ->label('Brand')
                                     ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->searchable()
+                                    ->preload()
                                     ->reactive()
                                     ->afterStateUpdated(function (Set $set) {
                                         $set('part_number_id', null);
@@ -126,15 +128,27 @@ class OutboundRecordResource extends Resource
 
                                 Forms\Components\Select::make('part_number_id')
                                     ->label('Part Number')
-                                    ->options(function (Get $get) {
+                                    ->options(function (callable $get) {
                                         $brandId = $get('brand_id');
                                         if (!$brandId) return [];
                                         return \App\Models\PartNumber::where('brand_id', $brandId)
                                             ->pluck('part_number', 'part_number_id');
                                     })
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
                                     ->required(fn (Get $get): bool => filled($get('brand_id')))
                                     ->disabled(fn (Get $get): bool => !filled($get('brand_id')))
-                                    ->reactive(),
+                                    ->afterStateUpdated(function (Set $set, $state) {
+                                        if (!$state) {
+                                            $set('batch_quantity', null);
+                                            $set('available_quantity', null);
+                                            return;
+                                        }
+                                        
+                                        $batchItem = BatchItem::where('part_number_id', $state)->first();
+                                        $set('available_quantity', $batchItem ? $batchItem->quantity : 0);
+                                    }),
 
                                 Forms\Components\Select::make('purpose_id')
                                     ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
@@ -171,6 +185,8 @@ class OutboundRecordResource extends Resource
                                 Forms\Components\Select::make('brand_id')
                                     ->label('Brand')
                                     ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->searchable()
+                                    ->preload()
                                     ->reactive()
                                     ->afterStateUpdated(function (Set $set) {
                                         $set('part_number_id', null);
@@ -180,7 +196,7 @@ class OutboundRecordResource extends Resource
 
                                 Forms\Components\Select::make('part_number_id')
                                     ->label('Part Number')
-                                    ->options(function (Get $get) {
+                                    ->options(function (callable $get) {
                                         $brandId = $get('brand_id');
                                         if (!$brandId) return [];
                                         return \App\Models\PartNumber::where('brand_id', $brandId)

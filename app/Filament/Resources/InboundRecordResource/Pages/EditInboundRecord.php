@@ -14,6 +14,10 @@ use App\Models\BatchItem;
 use Illuminate\Support\HtmlString;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\OutboundItem;
+use Illuminate\Database\Eloquent\Builder;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 
 class EditInboundRecord extends EditRecord
 {
@@ -29,41 +33,39 @@ class EditInboundRecord extends EditRecord
                     $this->addItem($data);
                 })
                 ->form([
-                    Forms\Components\Select::make('brand_id')
+                    Select::make('brand_id')
                         ->label('Brand')
-                        ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                        ->required()
+                        ->relationship('brand', 'brand_name')
+                        ->searchable()
+                        ->preload()
                         ->reactive()
                         ->createOptionForm([
-                            Forms\Components\TextInput::make('brand_name')
+                            TextInput::make('brand_name')
                                 ->required()
                                 ->unique('brands', 'brand_name')
                         ])
-                        ->createOptionUsing(function (array $data) {
-                            return \App\Models\Brand::create([
-                                'brand_name' => $data['brand_name']
-                            ])->brand_id;
-                        })
                         ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
 
-                    Forms\Components\Select::make('part_number_id')
+                    Select::make('part_number_id')
                         ->label('Part Number')
-                        ->options(function (callable $get) {
-                            $brandId = $get('brand_id');
-                            if (!$brandId) return [];
-                            return \App\Models\PartNumber::where('brand_id', $brandId)
-                                ->pluck('part_number', 'part_number_id');
-                        })
+                        ->relationship(
+                            'partNumber',
+                            'part_number',
+                            fn (Builder $query, callable $get) => 
+                                $query->where('brand_id', $get('brand_id'))
+                        )
+                        ->searchable()
+                        ->preload()
                         ->required()
                         ->createOptionForm([
-                            Forms\Components\Select::make('brand_id')
+                            Select::make('brand_id')
                                 ->label('Brand')
                                 ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
                                 ->required(),
-                            Forms\Components\TextInput::make('part_number')
+                            TextInput::make('part_number')
                                 ->required()
                                 ->unique('part_numbers', 'part_number'),
-                            Forms\Components\Textarea::make('description')
+                            Textarea::make('description')
                                 ->columnSpanFull(),
                         ])
                         ->createOptionUsing(function (array $data) {
@@ -74,7 +76,7 @@ class EditInboundRecord extends EditRecord
                             ])->part_number_id;
                         }),
 
-                    Forms\Components\Textarea::make('bulk_serial_numbers')
+                    Textarea::make('bulk_serial_numbers')
                         ->label('Serial Numbers')
                         ->required()
                         ->helperText('Satu serial number per baris'),
@@ -87,41 +89,39 @@ class EditInboundRecord extends EditRecord
                     $this->addBatchItem($data);
                 })
                 ->form([
-                    Forms\Components\Select::make('brand_id')
+                    Select::make('brand_id')
                         ->label('Brand')
-                        ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                        ->required()
+                        ->relationship('brand', 'brand_name')
+                        ->searchable()
+                        ->preload()
                         ->reactive()
                         ->createOptionForm([
-                            Forms\Components\TextInput::make('brand_name')
+                            TextInput::make('brand_name')
                                 ->required()
                                 ->unique('brands', 'brand_name')
                         ])
-                        ->createOptionUsing(function (array $data) {
-                            return \App\Models\Brand::create([
-                                'brand_name' => $data['brand_name']
-                            ])->brand_id;
-                        })
                         ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
 
-                    Forms\Components\Select::make('part_number_id')
+                    Select::make('part_number_id')
                         ->label('Part Number')
-                        ->options(function (callable $get) {
-                            $brandId = $get('brand_id');
-                            if (!$brandId) return [];
-                            return \App\Models\PartNumber::where('brand_id', $brandId)
-                                ->pluck('part_number', 'part_number_id');
-                        })
+                        ->relationship(
+                            'partNumber',
+                            'part_number',
+                            fn (Builder $query, callable $get) => 
+                                $query->where('brand_id', $get('brand_id'))
+                        )
+                        ->searchable()
+                        ->preload()
                         ->required()
                         ->createOptionForm([
-                            Forms\Components\Select::make('brand_id')
+                            Select::make('brand_id')
                                 ->label('Brand')
                                 ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
                                 ->required(),
-                            Forms\Components\TextInput::make('part_number')
+                            TextInput::make('part_number')
                                 ->required()
                                 ->unique('part_numbers', 'part_number'),
-                            Forms\Components\Textarea::make('description')
+                            Textarea::make('description')
                                 ->columnSpanFull(),
                         ])
                         ->createOptionUsing(function (array $data) {
@@ -132,18 +132,18 @@ class EditInboundRecord extends EditRecord
                             ])->part_number_id;
                         }),
 
-                    Forms\Components\TextInput::make('batch_quantity')
+                    TextInput::make('batch_quantity')
                         ->label('Quantity')
                         ->numeric()
                         ->required()
                         ->minValue(1),
 
-                    Forms\Components\Select::make('format_id')
+                    Select::make('format_id')
                         ->label('Satuan')
                         ->options(fn () => \App\Models\UnitFormat::pluck('name', 'format_id'))
                         ->required()
                         ->createOptionForm([
-                            Forms\Components\TextInput::make('name')
+                            TextInput::make('name')
                                 ->required()
                                 ->unique('unit_formats', 'name')
                         ])
