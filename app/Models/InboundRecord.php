@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class InboundRecord extends Model
 {
+    use LogsActivity;
+
     protected $primaryKey = 'inbound_id';
     
     protected $fillable = [
@@ -99,5 +103,19 @@ class InboundRecord extends Model
         $paddedSequence = str_pad($newSequence, 2, '0', STR_PAD_LEFT);
         
         return sprintf('%s-%s.%s-%s-P', $paddedSequence, $currentMonth, $currentYear, $locationCode);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['lpb_number', 'receive_date', 'location', 'note'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => match($eventName) {
+                'created' => 'membuat Barang Masuk baru',
+                'updated' => 'mengubah Barang Masuk',
+                'deleted' => 'menghapus Barang Masuk',
+                default => $eventName
+            });
     }
 } 

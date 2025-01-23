@@ -41,7 +41,14 @@ class ViewInboundRecord extends ViewRecord
                         TextEntry::make('project.project_name')
                             ->label('Nama Project'),
                         TextEntry::make('project.vendor.vendor_name')
-                            ->label('Customer/Supplier'),
+                            ->label('Customer')
+                            ->url(fn ($record) => url("/admin/vendors/{$record->project->vendor_id}"))
+                            ->openUrlInNewTab(),
+                        TextEntry::make('purchaseOrder.vendor.vendor_name')
+                            ->label('Supplier')
+                            ->url(fn ($record) => url("/admin/vendors/{$record->purchaseOrder->vendor_id}"))
+                            ->openUrlInNewTab()
+                            ->visible(fn ($record) => $record->purchaseOrder),
                         TextEntry::make('purchaseOrder.po_number')
                             ->label('PO Number')
                             ->weight(FontWeight::Bold)

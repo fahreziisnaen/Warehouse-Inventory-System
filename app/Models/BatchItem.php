@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class BatchItem extends Model
 {
+    use LogsActivity;
+
     protected $primaryKey = 'batch_item_id';
     
     protected $fillable = [
@@ -79,5 +83,19 @@ class BatchItem extends Model
         ]);
 
         return $batchItem;
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['part_number_id', 'quantity', 'format_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => match($eventName) {
+                'created' => 'membuat Batch Item baru',
+                'updated' => 'mengubah data Batch Item',
+                'deleted' => 'menghapus Batch Item',
+                default => $eventName
+            });
     }
 } 

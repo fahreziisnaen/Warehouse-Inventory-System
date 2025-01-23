@@ -18,7 +18,6 @@ return new class extends Migration
             $table->foreign('project_id')->references('project_id')->on('projects');
             $table->foreignId('part_number_id')->nullable()->constrained('part_numbers', 'part_number_id');
             $table->integer('batch_quantity')->nullable();
-            $table->foreignId('purpose_id')->constrained('purposes', 'purpose_id');
             $table->text('note')->nullable();
             $table->timestamps();
         });

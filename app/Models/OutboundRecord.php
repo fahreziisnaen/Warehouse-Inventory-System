@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class OutboundRecord extends Model
 {
+    use LogsActivity;
+
     protected $primaryKey = 'outbound_id';
     
     protected $fillable = [
@@ -50,11 +54,6 @@ class OutboundRecord extends Model
     public function partNumber(): BelongsTo
     {
         return $this->belongsTo(PartNumber::class, 'part_number_id');
-    }
-
-    public function purpose(): BelongsTo
-    {
-        return $this->belongsTo(Purpose::class, 'purpose_id');
     }
 
     protected static function booted()
@@ -153,5 +152,19 @@ class OutboundRecord extends Model
         $paddedSequence = str_pad($newSequence, 2, '0', STR_PAD_LEFT);
         
         return sprintf('%s-%s.%s-%s-K', $paddedSequence, $currentMonth, $currentYear, $locationCode);
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['lkb_number', 'delivery_date', 'location', 'note'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => match($eventName) {
+                'created' => 'membuat Barang Keluar baru',
+                'updated' => 'mengubah Barang Keluar',
+                'deleted' => 'menghapus Barang Keluar',
+                default => $eventName
+            });
     }
 } 

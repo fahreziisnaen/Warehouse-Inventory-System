@@ -10,6 +10,7 @@ use Filament\Notifications\Notification;
 use Filament\Notifications\Actions\Action;
 use App\Models\BatchItem;
 use Filament\Forms\Components\Select;
+use Illuminate\Support\HtmlString;
 
 class CreateOutboundRecord extends CreateRecord
 {
@@ -17,10 +18,12 @@ class CreateOutboundRecord extends CreateRecord
 
     protected function beforeCreate(): void
     {
-        $errors = [];
-        $validItems = 0;
-
-        // Validasi Items dengan Serial Number
+        // Validasi: harus ada minimal satu Item atau satu Batch Item
+        $hasItems = false;
+        $invalidSerials = [];
+        $unavailableSerials = [];
+        $wrongPartNumberSerials = [];
+        
         if (!empty($this->data['outboundItems'])) {
             foreach ($this->data['outboundItems'] as $itemData) {
                 if (empty($itemData['brand_id']) || 
@@ -38,64 +41,79 @@ class CreateOutboundRecord extends CreateRecord
                 foreach ($serialNumbers as $serialNumber) {
                     if (empty($serialNumber)) continue;
 
-                    $item = Item::where('serial_number', $serialNumber)
-                        ->whereIn('status', ['diterima', 'unknown'])
-                        ->first();
-
+                    // Cek ketersediaan item
+                    $item = Item::where('serial_number', $serialNumber)->first();
+                    
                     if (!$item) {
-                        $errors[] = "Serial Number '{$serialNumber}' tidak ditemukan dalam database";
+                        $unavailableSerials[] = $serialNumber;
                         continue;
                     }
 
                     // Validasi Part Number sesuai
                     if ($item->part_number_id != $itemData['part_number_id']) {
-                        $errors[] = "Serial Number '{$serialNumber}' tidak sesuai dengan Part Number yang dipilih";
+                        $wrongPartNumberSerials[] = $serialNumber;
                         continue;
                     }
 
-                    $validItems++;
+                    // Cek status item
+                    if ($item->status !== 'diterima') {
+                        $invalidSerials[] = "Serial Number <strong>{$serialNumber}</strong> memiliki status <strong>{$item->status}</strong>";
+                        continue;
+                    }
+
+                    $hasItems = true;
                 }
             }
         }
 
         // Validasi Batch Items
-        $hasBatchItems = !empty($this->data['batchItems']) && 
-            collect($this->data['batchItems'])->some(fn ($item) => 
-                !empty($item['part_number_id']) && 
-                !empty($item['batch_quantity']) && 
-                $item['batch_quantity'] > 0
-            );
+        $hasBatchItems = !empty($this->data['batchItems']) && collect($this->data['batchItems'])->some(function ($item) {
+            return !empty($item['part_number_id']) && 
+                   !empty($item['batch_quantity']);
+        });
 
-        // Jika tidak ada item valid dan tidak ada batch items
-        if ($validItems === 0 && !$hasBatchItems) {
-            if (!empty($errors)) {
-                Notification::make()
-                    ->title('Validasi Gagal')
-                    ->body(implode("\n", $errors))
-                    ->danger()
-                    ->persistent()
-                    ->actions([
-                        Action::make('close')
-                            ->label('Tutup')
-                            ->color('danger')
-                            ->close()
-                    ])
-                    ->send();
-            } else {
-                Notification::make()
-                    ->title('Error')
-                    ->body('Minimal harus mengisi salah satu: Items atau Batch Item yang valid')
-                    ->danger()
-                    ->persistent()
-                    ->actions([
-                        Action::make('close')
-                            ->label('Tutup')
-                            ->color('danger')
-                            ->close()
-                    ])
-                    ->send();
+        if (!$hasItems && !$hasBatchItems) {
+            throw new \Exception('Minimal harus ada satu item atau batch item yang valid');
+        }
+
+        // Tampilkan error dialog jika ada serial number yang tidak valid
+        if (!empty($unavailableSerials) || !empty($wrongPartNumberSerials) || !empty($invalidSerials)) {
+            $errorMessages = [];
+            
+            if (!empty($unavailableSerials)) {
+                $errorMessages[] = "<div class='font-semibold mb-2'>Serial Number tidak tersedia:</div>" .
+                    "<ul class='list-disc pl-4 mb-2'><li>" . 
+                    implode("</li><li>", $unavailableSerials) . 
+                    "</li></ul>";
             }
             
+            if (!empty($wrongPartNumberSerials)) {
+                $errorMessages[] = "<div class='font-semibold mb-2'>Serial Number tidak sesuai dengan Part Number:</div>" .
+                    "<ul class='list-disc pl-4 mb-2'><li>" . 
+                    implode("</li><li>", $wrongPartNumberSerials) . 
+                    "</li></ul>";
+            }
+            
+            if (!empty($invalidSerials)) {
+                $errorMessages[] = "<div class='font-semibold mb-2'>Serial Number dengan status tidak valid:</div>" .
+                    "<ul class='list-disc pl-4'><li>" . 
+                    implode("</li><li>", $invalidSerials) . 
+                    "</li></ul>";
+            }
+
+            Notification::make()
+                ->title('Validasi Serial Number Gagal')
+                ->body(new HtmlString(implode("", $errorMessages)))
+                ->danger()
+                ->persistent()
+                ->actions([
+                    Action::make('close')
+                        ->label('Tutup')
+                        ->color('danger')
+                        ->close()
+                ])
+                ->send();
+
             $this->halt();
         }
     }
@@ -104,8 +122,8 @@ class CreateOutboundRecord extends CreateRecord
     {
         $record = $this->record;
         $formData = $this->data;
-        $errors = [];
         $addedCount = 0;
+        $errors = [];
 
         // Proses Items dengan Serial Number
         if (!empty($formData['outboundItems'])) {
@@ -126,19 +144,10 @@ class CreateOutboundRecord extends CreateRecord
                     if (empty($serialNumber)) continue;
 
                     $item = Item::where('serial_number', $serialNumber)
-                        ->whereIn('status', ['diterima', 'unknown'])
+                        ->where('status', 'diterima')
                         ->first();
 
-                    if (!$item) {
-                        $errors[] = "Serial Number '{$serialNumber}' tidak ditemukan dalam database";
-                        continue;
-                    }
-
-                    // Validasi Part Number sesuai
-                    if ($item->part_number_id != $itemData['part_number_id']) {
-                        $errors[] = "Serial Number '{$serialNumber}' tidak sesuai dengan Part Number yang dipilih";
-                        continue;
-                    }
+                    if (!$item) continue;
 
                     OutboundItem::create([
                         'outbound_id' => $record->outbound_id,
@@ -148,6 +157,29 @@ class CreateOutboundRecord extends CreateRecord
                     ]);
 
                     $addedCount++;
+                }
+            }
+        }
+
+        // Proses Batch Items
+        if (!empty($formData['batchItems'])) {
+            foreach ($formData['batchItems'] as $batchItem) {
+                if (empty($batchItem['part_number_id']) || 
+                    empty($batchItem['batch_quantity'])) {
+                    continue;
+                }
+
+                $availableBatch = BatchItem::where('part_number_id', $batchItem['part_number_id'])
+                    ->where('quantity', '>=', $batchItem['batch_quantity'])
+                    ->first();
+
+                if ($availableBatch) {
+                    BatchItem::updateQuantity(
+                        $batchItem['part_number_id'],
+                        -$batchItem['batch_quantity'],
+                        'outbound',
+                        $record
+                    );
                 }
             }
         }
@@ -172,22 +204,6 @@ class CreateOutboundRecord extends CreateRecord
                 ->title("{$addedCount} item berhasil ditambahkan")
                 ->success()
                 ->send();
-        }
-
-        // Proses Batch Items
-        if (!empty($formData['batchItems'])) {
-            foreach ($formData['batchItems'] as $batchItem) {
-                if (empty($batchItem['part_number_id']) || empty($batchItem['batch_quantity'])) {
-                    continue;
-                }
-
-                BatchItem::updateQuantity(
-                    $batchItem['part_number_id'],
-                    -$batchItem['batch_quantity'],
-                    'outbound',
-                    $record
-                );
-            }
         }
     }
 
