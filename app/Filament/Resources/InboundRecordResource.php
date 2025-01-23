@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Model;
 use Filament\Forms\Set;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\View\Compilers\BladeCompiler;
 
 class InboundRecordResource extends Resource
 {
@@ -109,11 +110,13 @@ class InboundRecordResource extends Resource
                             ->schema([
                                 Select::make('brand_id')
                                     ->label('Brand')
-                                    ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->relationship('brand', 'brand_name')
+                                    ->searchable()
+                                    ->preload()
                                     ->reactive()
                                     ->createOptionForm([
                                         TextInput::make('brand_name')
-                                    ->required()
+                                            ->required()
                                             ->unique('brands', 'brand_name')
                                     ])
                                     ->createOptionUsing(function (array $data) {
@@ -125,12 +128,14 @@ class InboundRecordResource extends Resource
 
                                 Select::make('part_number_id')
                                     ->label('Part Number')
-                                    ->options(function (callable $get) {
-                                        $brandId = $get('brand_id');
-                                        if (!$brandId) return [];
-                                        return \App\Models\PartNumber::where('brand_id', $brandId)
-                                            ->pluck('part_number', 'part_number_id');
-                                    })
+                                    ->relationship(
+                                        'partNumber',
+                                        'part_number',
+                                        fn (Builder $query, callable $get) => 
+                                            $query->where('brand_id', $get('brand_id'))
+                                    )
+                                    ->searchable()
+                                    ->preload()
                                     ->required(fn (Get $get): bool => filled($get('brand_id')))
                                     ->reactive()
                                     ->createOptionForm([
@@ -139,7 +144,7 @@ class InboundRecordResource extends Resource
                                             ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
                                             ->required(),
                                         TextInput::make('part_number')
-                                    ->required()
+                                            ->required()
                                             ->unique('part_numbers', 'part_number'),
                                         Textarea::make('description')
                                             ->columnSpanFull(),
@@ -182,7 +187,9 @@ class InboundRecordResource extends Resource
                             ->schema([
                                 Select::make('brand_id')
                                     ->label('Brand')
-                                    ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                    ->relationship('brand', 'brand_name')
+                                    ->searchable()
+                                    ->preload()
                                     ->reactive()
                                     ->createOptionForm([
                                         TextInput::make('brand_name')
@@ -198,18 +205,22 @@ class InboundRecordResource extends Resource
 
                                 Select::make('part_number_id')
                                     ->label('Part Number')
-                                    ->options(function (callable $get) {
-                                        $brandId = $get('brand_id');
-                                        if (!$brandId) return [];
-                                        return \App\Models\PartNumber::where('brand_id', $brandId)
-                                            ->pluck('part_number', 'part_number_id');
-                                    })
+                                    ->relationship(
+                                        'partNumber',
+                                        'part_number',
+                                        fn (Builder $query, callable $get) => 
+                                            $query->where('brand_id', $get('brand_id'))
+                                    )
+                                    ->searchable()
+                                    ->preload()
                                     ->required(fn (Get $get): bool => filled($get('brand_id')))
                                     ->reactive()
                                     ->createOptionForm([
                                         Select::make('brand_id')
                                             ->label('Brand')
-                                            ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                            ->relationship('brand', 'brand_name')
+                                            ->searchable()
+                                            ->preload()
                                             ->required(),
                                         TextInput::make('part_number')
                                             ->required()

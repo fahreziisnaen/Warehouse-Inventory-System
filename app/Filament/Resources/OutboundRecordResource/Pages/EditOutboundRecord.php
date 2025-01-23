@@ -31,7 +31,8 @@ class EditOutboundRecord extends EditRecord
                     Forms\Components\Select::make('brand_id')
                         ->label('Brand')
                         ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                        ->required()
+                        ->searchable(true)
+                        ->preload()
                         ->reactive()
                         ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
 
@@ -43,6 +44,8 @@ class EditOutboundRecord extends EditRecord
                             return \App\Models\PartNumber::where('brand_id', $brandId)
                                 ->pluck('part_number', 'part_number_id');
                         })
+                        ->searchable(true)
+                        ->preload()
                         ->required(),
 
                     Forms\Components\Textarea::make('bulk_serial_numbers')
@@ -51,11 +54,11 @@ class EditOutboundRecord extends EditRecord
                         ->helperText('Satu serial number per baris'),
 
                     Forms\Components\Select::make('purpose_id')
-                        ->relationship('purpose', 'name')
                         ->label('Tujuan')
-                        ->required()
-                        ->searchable()
-                        ->preload(),
+                        ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
+                        ->searchable(true)
+                        ->preload()
+                        ->required(),
                 ]),
 
             Action::make('addBatchItem')
@@ -68,7 +71,8 @@ class EditOutboundRecord extends EditRecord
                     Forms\Components\Select::make('brand_id')
                         ->label('Brand')
                         ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
-                        ->required()
+                        ->searchable(true)
+                        ->preload()
                         ->reactive()
                         ->afterStateUpdated(fn (callable $set) => $set('part_number_id', null)),
 
@@ -80,6 +84,8 @@ class EditOutboundRecord extends EditRecord
                             return \App\Models\PartNumber::where('brand_id', $brandId)
                                 ->pluck('part_number', 'part_number_id');
                         })
+                        ->searchable(true)
+                        ->preload()
                         ->required(),
 
                     Forms\Components\TextInput::make('batch_quantity')
@@ -87,6 +93,13 @@ class EditOutboundRecord extends EditRecord
                         ->numeric()
                         ->required()
                         ->minValue(1),
+
+                    Forms\Components\Select::make('purpose_id')
+                        ->label('Tujuan')
+                        ->options(fn () => \App\Models\Purpose::pluck('name', 'purpose_id'))
+                        ->searchable(true)
+                        ->preload()
+                        ->required(),
                 ]),
         ];
     }

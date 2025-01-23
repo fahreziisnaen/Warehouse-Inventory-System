@@ -307,6 +307,8 @@ class CreateInboundRecord extends CreateRecord
                             Select::make('brand_id')
                                 ->label('Brand')
                                 ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                ->searchable(true)
+                                ->preload()
                                 ->reactive()
                                 ->createOptionForm([
                                     TextInput::make('brand_name')
@@ -328,6 +330,8 @@ class CreateInboundRecord extends CreateRecord
                                     return \App\Models\PartNumber::where('brand_id', $brandId)
                                         ->pluck('part_number', 'part_number_id');
                                 })
+                                ->searchable(true)
+                                ->preload()
                                 ->required()
                                 ->reactive()
                                 ->createOptionForm([
@@ -376,6 +380,8 @@ class CreateInboundRecord extends CreateRecord
                             Select::make('brand_id')
                                 ->label('Brand')
                                 ->options(fn () => \App\Models\Brand::pluck('brand_name', 'brand_id'))
+                                ->searchable(true)
+                                ->preload()
                                 ->reactive()
                                 ->createOptionForm([
                                     TextInput::make('brand_name')
@@ -397,6 +403,8 @@ class CreateInboundRecord extends CreateRecord
                                     return \App\Models\PartNumber::where('brand_id', $brandId)
                                         ->pluck('part_number', 'part_number_id');
                                 })
+                                ->searchable(true)
+                                ->preload()
                                 ->required()
                                 ->reactive()
                                 ->createOptionForm([

@@ -5,9 +5,14 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\Models\Activity;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Project extends Model
 {
+    use LogsActivity;
+
     protected $primaryKey = 'project_id';
     public $incrementing = false;
     protected $keyType = 'string';
@@ -41,5 +46,19 @@ class Project extends Model
     public function getRouteKeyName()
     {
         return 'project_id';
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['project_name', 'project_id', 'vendor_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => match($eventName) {
+                'created' => 'membuat Project baru',
+                'updated' => 'mengubah data Project',
+                'deleted' => 'menghapus Project',
+                default => $eventName
+            });
     }
 } 

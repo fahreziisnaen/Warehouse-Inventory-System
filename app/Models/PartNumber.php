@@ -5,9 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class PartNumber extends Model
 {
+    use LogsActivity;
+
     protected $primaryKey = 'part_number_id';
     
     protected $fillable = [
@@ -30,5 +34,19 @@ class PartNumber extends Model
     public function batchItems(): HasMany
     {
         return $this->hasMany(BatchItem::class, 'part_number_id');
+    }
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['part_number', 'description', 'brand_id'])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs()
+            ->setDescriptionForEvent(fn(string $eventName) => match($eventName) {
+                'created' => 'membuat Part Number baru',
+                'updated' => 'mengubah data Part Number',
+                'deleted' => 'menghapus Part Number',
+                default => $eventName
+            });
     }
 } 

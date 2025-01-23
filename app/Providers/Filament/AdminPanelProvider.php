@@ -22,6 +22,7 @@ use App\Filament\Widgets\StatsOverviewWidget;
 use Illuminate\Support\HtmlString;
 use App\Filament\Resources;
 use App\Filament\Pages\Dashboard;
+use App\Filament\Widgets\LatestActivities;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -87,6 +88,7 @@ class AdminPanelProvider extends PanelProvider
                 Widgets\AccountWidget::class,
                 Widgets\FilamentInfoWidget::class,
                 StatsOverviewWidget::class,
+                LatestActivities::class,
             ])
             ->middleware([
                 EncryptCookies::class,

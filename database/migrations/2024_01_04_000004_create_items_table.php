@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('part_number_id')->constrained('part_numbers', 'part_number_id');
             $table->string('serial_number')->unique();
             $table->string('status');
+            $table->enum('condition', ['Baru', 'Bekas']);
             $table->timestamps();
         });
     }
