@@ -57,6 +57,19 @@ class BatchItem extends Model
             );
     }
 
+    public function outboundHistories(): HasMany
+    {
+        return $this->hasMany(BatchItemHistory::class, 'batch_item_id')
+            ->where('type', 'outbound')
+            ->where('recordable_type', 'App\\Models\\OutboundRecord')
+            ->orderByDesc(
+                \DB::raw("COALESCE(
+                    (SELECT delivery_date FROM outbound_records WHERE outbound_id = recordable_id),
+                    created_at
+                )")
+            );
+    }
+
     public static function updateQuantity($partNumberId, $quantity, $type, $record = null)
     {
         $batchItem = self::where('part_number_id', $partNumberId)->first();

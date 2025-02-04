@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Tables\Actions\DeleteAction;
 
 class PartNumberResource extends Resource
 {
@@ -71,7 +72,13 @@ class PartNumberResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make()
+                    ->visible(fn (PartNumber $record): bool => $record->items()->count() === 0)
+                    ->before(function (PartNumber $record) {
+                        if ($record->items()->count() > 0) {
+                            return false;
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
